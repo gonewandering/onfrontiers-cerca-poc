@@ -1,0 +1,2 @@
+# Load a CSV list of attributes
+This feature should update the /api/attributes POST method to accept a csv file in the body of the request that contains the column headers corresponding to an Attribute (type, name, summary, depth, path(optional)). The endpoint should loop over each row, create an embedding based on the name and summary of the attribute. If the path column has a value, the endpoint should locate the parent object and save it's ID in the parent_id column. When it completes, the api should return the number of rows created and any errors in a json response.

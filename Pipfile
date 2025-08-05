@@ -7,6 +7,13 @@ name = "pypi"
 flask = "*"
 flask-restful = "*"
 sqlalchemy = "*"
+openai = "*"
+pydantic = "*"
+flask-migrate = "*"
+numpy = "*"
+psycopg2-binary = "*"
+pgvector = "*"
+requests = "*"
 
 [dev-packages]
 

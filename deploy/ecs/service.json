@@ -1,0 +1,46 @@
+{
+  "serviceName": "cerca-api-service",
+  "cluster": "cerca-cluster",
+  "taskDefinition": "cerca-api",
+  "desiredCount": 2,
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-0c988bae329f14d31",
+        "subnet-0af6aca7def3cff9f"
+      ],
+      "securityGroups": [
+        "sg-095943a923fded506"
+      ],
+      "assignPublicIp": "ENABLED"
+    }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:471112664201:targetgroup/cerca-api-tg/12345",
+      "containerName": "cerca-api",
+      "containerPort": 5000
+    }
+  ],
+  "healthCheckGracePeriodSeconds": 120,
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 50,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    }
+  },
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "production"
+    },
+    {
+      "key": "Service",
+      "value": "cerca-api"
+    }
+  ]
+}

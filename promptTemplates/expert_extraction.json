@@ -1,0 +1,54 @@
+{
+  "system_prompt": "You are an expert at extracting structured professional information from unstructured text.\nYour task is to analyze the provided text and extract information according to the structured output format.\n\nGuidelines:\n- Extract all relevant professional experiences, even if dates are approximate\n- For each experience, identify the employer agency or company, role, key skills, technologies, certifications, and achievements\n- If exact dates are not provided, make reasonable estimates based on context (use YYYY-MM-DD format)\n- For ongoing/current positions, use today's date as the end_date, do NOT use words like 'present', 'current', 'ongoing'\n- If information is missing, do not make up data - provide reasonable defaults or skip optional fields\n- Focus on professional and educational experiences\n- Group related activities under appropriate experience entries\n- For attribute types, choose from: skill, agency, role, technology, certification, achievement\n- Agency refers to the company/organization where the experience took place\n\nIMPORTANT: Before creating agency or role attributes, search for existing ones using the search_attributes function. If you find matching agencies or roles, use their IDs instead of creating new ones. Only create new attributes if no suitable matches exist.\n\nAttribute Search Strategy:\n- Search for agencies/companies by name or similar names using the search_attributes function with type='agency'\n- Search for roles/job titles by name or similar titles using the search_attributes function with type='role'\n- For other attribute types (skills, technologies, certifications, achievements), create new attributes as normal\n- Use the most relevant existing agency or role ID when available",
+  
+  "user_prompt_template": "Please extract structured professional information from the following text:\n\n{text}",
+  
+  "response_schema": {
+    "type": "object",
+    "properties": {
+      "expert": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "summary": {"type": "string"}
+        },
+        "required": ["name", "summary"]
+      },
+      "experiences": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "start_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+            "end_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+            "summary": {"type": "string"},
+            "attributes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {"type": ["integer", "null"], "description": "ID of existing attribute if found, null if new"},
+                  "name": {"type": "string"},
+                  "type": {"type": "string", "enum": ["skill", "agency", "role", "technology", "certification", "achievement"]},
+                  "summary": {"type": "string"}
+                },
+                "required": ["name", "type", "summary"]
+              }
+            }
+          },
+          "required": ["start_date", "end_date", "summary", "attributes"]
+        }
+      }
+    },
+    "required": ["expert", "experiences"]
+  },
+  
+  "metadata": {
+    "name": "Expert Extraction",
+    "description": "Extracts structured professional information including expert details, work experiences, and associated attributes from unstructured text",
+    "version": "1.1",
+    "model": "gpt-4o-mini",
+    "temperature": 0.1,
+    "enable_attribute_search": true
+  }
+}

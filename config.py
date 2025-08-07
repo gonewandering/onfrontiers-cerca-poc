@@ -1,6 +1,10 @@
 # Attributes configuration for LLM function calling
 
+OPENAI_API_KEY = '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'
 SEARCHABLE_ATTRIBUTE_TYPES = ["agency", "role", "seniority", "skill", "program"]
+
+# Minimum similarity threshold for database attribute matching
+ATTRIBUTE_MATCHING_THRESHOLD = 0.7
 
 # Attribute weights for search scoring (higher = more important)
 ATTRIBUTE_WEIGHTS = [

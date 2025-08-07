@@ -136,13 +136,16 @@ class ExpertSearchResource(Resource):
                 print(f"DEBUG - LLM attribute extraction completed in {llm_time:.2f}s")
                 print(f"DEBUG - Raw LLM output: {llm_extracted}")
                 
-                # STEP 2: For each extracted attribute, find similar DB attributes using cosine similarity
+                # STEP 2: Batch generate embeddings and find similar DB attributes
                 from lib.embedding_service import embedding_service
                 
                 search_attributes = {}  # Final attributes to search for, with similarity scores
                 extracted_attributes = {}  # For UI display
-                
                 similarity_threshold = effective_config.get('similarity_threshold', 0.4)
+                
+                # Collect all terms for batch embedding generation
+                all_terms = []
+                term_to_type = {}
                 
                 for attr_type in SEARCHABLE_ATTRIBUTE_TYPES:
                     attr_key = f"{attr_type}_terms"
@@ -150,55 +153,67 @@ class ExpertSearchResource(Resource):
                         search_attributes[attr_type] = []
                         extracted_attributes[attr_type] = []
                         
-                        # Take top 2 extracted terms per type
-                        terms = llm_extracted[attr_key][:2] if len(llm_extracted[attr_key]) > 2 else llm_extracted[attr_key]
-                        
+                        terms = llm_extracted[attr_key][:1] if llm_extracted[attr_key] else []
                         for term in terms:
-                            if not term.strip():
-                                continue
-                                
-                            # Generate embedding for the extracted term
-                            term_embedding = embedding_service.generate_embedding(term.strip())
+                            if term.strip():
+                                all_terms.append(term.strip())
+                                term_to_type[term.strip()] = attr_type
+                
+                # Batch generate embeddings for all terms at once
+                if all_terms:
+                    try:
+                        # Generate all embeddings in a single API call
+                        embeddings = embedding_service.generate_batch_embeddings(all_terms)
+                        
+                        # Process each term with its embedding
+                        for term, term_embedding in zip(all_terms, embeddings):
+                            attr_type = term_to_type[term]
                             
-                            # Find similar attributes of this type in DB
-                            db_attributes = session.query(Attribute).filter(
-                                Attribute.type == attr_type,
-                                Attribute.embedding.isnot(None)
-                            ).all()
+                            # Convert embedding to pgvector format
+                            embedding_str = '[' + ','.join(map(str, term_embedding)) + ']'
                             
-                            best_match = None
-                            best_similarity = 0.0
+                            # Single optimized query that returns all needed data
+                            similarity_query = text(f"""
+                                SELECT id, name, type, summary, 
+                                       (1 - (embedding <=> '{embedding_str}'::vector)) AS similarity
+                                FROM attribute 
+                                WHERE type = :attr_type 
+                                  AND embedding IS NOT NULL
+                                  AND (1 - (embedding <=> '{embedding_str}'::vector)) >= :similarity_threshold
+                                ORDER BY embedding <=> '{embedding_str}'::vector
+                                LIMIT 1
+                            """)
                             
-                            for db_attr in db_attributes:
-                                similarity = embedding_service.cosine_similarity(term_embedding, db_attr.embedding)
-                                if similarity >= similarity_threshold and similarity > best_similarity:
-                                    best_match = db_attr
-                                    best_similarity = similarity
+                            result = session.execute(similarity_query, {
+                                'attr_type': attr_type,
+                                'similarity_threshold': similarity_threshold
+                            }).fetchone()
                             
-                            if best_match:
+                            if result:
                                 search_attributes[attr_type].append({
-                                    'id': best_match.id,
-                                    'name': best_match.name,
-                                    'similarity': best_similarity,
-                                    'extracted_term': term.strip()
+                                    'id': result.id,
+                                    'name': result.name,
+                                    'similarity': result.similarity,
+                                    'extracted_term': term
                                 })
                                 extracted_attributes[attr_type].append({
-                                    'id': best_match.id,
-                                    'name': f"{term.strip()} → {best_match.name}",
+                                    'id': result.id,
+                                    'name': f"{term} → {result.name}",
                                     'type': attr_type,
-                                    'relevance_score': best_similarity,
+                                    'relevance_score': result.similarity,
                                     'source': 'matched'
                                 })
-                                print(f"DEBUG - {attr_type}: '{term}' → '{best_match.name}' (similarity: {best_similarity:.3f})")
                             else:
-                                print(f"DEBUG - {attr_type}: '{term}' → no match above threshold ({similarity_threshold})")
                                 extracted_attributes[attr_type].append({
                                     'id': None,
-                                    'name': term.strip(),
+                                    'name': term,
                                     'type': attr_type,
                                     'relevance_score': 0.0,
                                     'source': 'no_match'
                                 })
+                    except Exception as embedding_error:
+                        print(f"ERROR - Batch embedding generation failed: {str(embedding_error)}")
+                        return {'message': f'Failed to generate embeddings: {str(embedding_error)}'}, 500
                 
                 # Get all attribute IDs for scoring
                 all_attribute_ids = []

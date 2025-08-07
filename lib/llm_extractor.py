@@ -4,11 +4,13 @@ from typing import Dict, Any, Optional, List, Callable
 import json
 from pathlib import Path
 import requests
-from config import SEARCHABLE_ATTRIBUTE_TYPES
+from config import SEARCHABLE_ATTRIBUTE_TYPES, OPENAI_API_KEY
 
 class LLMExtractor:
     def __init__(self, templates_dir: str = "promptTemplates", api_base_url: str = None):
-        self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        # Try config first, fall back to environment variable
+        api_key = OPENAI_API_KEY or os.getenv('OPENAI_API_KEY')
+        self.client = openai.OpenAI(api_key=api_key)
         self.templates_dir = Path(templates_dir)
         self.api_base_url = api_base_url or os.getenv('API_BASE_URL', 'http://127.0.0.1:5000')
         

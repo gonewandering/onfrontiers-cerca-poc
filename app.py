@@ -5,7 +5,7 @@ from flask_migrate import Migrate
 from database import engine  # Import to ensure database is initialized
 from models import Base
 
-from routes.experts import ExpertResource, ExpertListResource
+from routes.Experts import ExpertResource, ExpertListResource
 from routes.experiences import ExperienceResource, ExperienceListResource
 from routes.attributes import AttributeResource, AttributeListResource
 from routes.search import ExpertSearchResource

@@ -3,10 +3,13 @@ import os
 import numpy as np
 from typing import List, Optional, Tuple
 import settings
+from config import OPENAI_API_KEY
 
 class EmbeddingService:
     def __init__(self):
-        self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        # Try config first, fall back to environment variable
+        api_key = OPENAI_API_KEY or os.getenv('OPENAI_API_KEY')
+        self.client = openai.OpenAI(api_key=api_key)
         # Using OpenAI's latest text embedding model
         self.model = "text-embedding-3-small"  # More cost-effective, good performance
         # Alternative: "text-embedding-3-large" for higher quality but more expensive
@@ -29,6 +32,30 @@ class EmbeddingService:
             return response.data[0].embedding
         except Exception as e:
             raise Exception(f"Failed to generate embedding: {str(e)}")
+    
+    def generate_batch_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """
+        Generate embeddings for multiple texts in a single API call
+        
+        Args:
+            texts: List of texts to generate embeddings for
+            
+        Returns:
+            List of embedding vectors in the same order as input texts
+        """
+        try:
+            if not texts:
+                return []
+            
+            response = self.client.embeddings.create(
+                input=texts,
+                model=self.model
+            )
+            
+            # Return embeddings in the same order as input
+            return [item.embedding for item in response.data]
+        except Exception as e:
+            raise Exception(f"Failed to generate batch embeddings: {str(e)}")
     
     def generate_attribute_embedding(self, name: str, type_str: str, summary: str) -> List[float]:
         """

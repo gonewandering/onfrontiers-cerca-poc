@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expert Search - Weight Testing</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .results {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .weight-controls {
+            margin-bottom: 20px;
+        }
+        
+        .weight-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .weight-label {
+            flex: 1;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        
+        .weight-slider {
+            flex: 2;
+            margin: 0 10px;
+        }
+        
+        .weight-value {
+            width: 50px;
+            text-align: center;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .search-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .search-button:hover {
+            transform: translateY(-1px);
+        }
+        
+        .search-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .expert-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: #f8f9fa;
+        }
+        
+        .expert-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .expert-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #343a40;
+            flex: 1;
+        }
+        
+        .expert-score {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .expert-summary {
+            color: #6c757d;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        
+        .experiences {
+            margin-top: 12px;
+        }
+        
+        .experience {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .experience-summary {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .experience-dates {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        
+        .attributes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .attribute {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #495057;
+        }
+        
+        .attribute.agency { background: #e3f2fd; color: #1565c0; }
+        .attribute.role { background: #f3e5f5; color: #7b1fa2; }
+        .attribute.skill { background: #e8f5e8; color: #2e7d32; }
+        .attribute.seniority { background: #fff3e0; color: #ef6c00; }
+        .attribute.program { background: #fce4ec; color: #c2185b; }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+        
+        .search-meta {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .reset-button {
+            width: 100%;
+            padding: 8px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const DEFAULT_WEIGHTS = {
+            agency: 1.5,
+            role: 2.0,
+            seniority: 1.0,
+            skill: 1.8,
+            program: 1.2
+        };
+
+        function ExpertSearch() {
+            const [searchText, setSearchText] = useState('');
+            const [weights, setWeights] = useState(DEFAULT_WEIGHTS);
+            const [results, setResults] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            const handleWeightChange = (attributeType, value) => {
+                setWeights(prev => ({
+                    ...prev,
+                    [attributeType]: parseFloat(value)
+                }));
+            };
+
+            const resetWeights = () => {
+                setWeights(DEFAULT_WEIGHTS);
+            };
+
+            const handleSearch = async () => {
+                if (!searchText.trim()) return;
+                
+                setLoading(true);
+                setError(null);
+                
+                try {
+                    const attributeWeights = Object.entries(weights).map(([name, weight]) => ({
+                        name,
+                        weight
+                    }));
+
+                    const response = await fetch('/api/experts/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: searchText,
+                            page_size: 10,
+                            settings: {
+                                attribute_weights: attributeWeights
+                            }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Search failed: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    setResults(data);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>Expert Search - Weight Testing</h1>
+                        <p>Customize attribute weights to see how they affect search results</p>
+                    </div>
+                    
+                    <div className="content">
+                        <div className="controls">
+                            <h3>Search Controls</h3>
+                            
+                            <input
+                                type="text"
+                                className="search-input"
+                                placeholder="Enter search query (e.g., 'Python developer at Google')"
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                            />
+                            
+                            <div className="weight-controls">
+                                <h4>Attribute Weights</h4>
+                                {Object.entries(weights).map(([type, weight]) => (
+                                    <div key={type} className="weight-item">
+                                        <div className="weight-label">{type}</div>
+                                        <input
+                                            type="range"
+                                            className="weight-slider"
+                                            min="0.1"
+                                            max="5.0"
+                                            step="0.1"
+                                            value={weight}
+                                            onChange={(e) => handleWeightChange(type, e.target.value)}
+                                        />
+                                        <div className="weight-value">{weight}</div>
+                                    </div>
+                                ))}
+                                <button className="reset-button" onClick={resetWeights}>
+                                    Reset to Defaults
+                                </button>
+                            </div>
+                            
+                            <button 
+                                className="search-button" 
+                                onClick={handleSearch}
+                                disabled={loading || !searchText.trim()}
+                            >
+                                {loading ? 'Searching...' : 'Search Experts'}
+                            </button>
+                        </div>
+                        
+                        <div className="results">
+                            <h3>Search Results</h3>
+                            
+                            {error && (
+                                <div className="error">
+                                    Error: {error}
+                                </div>
+                            )}
+                            
+                            {loading && (
+                                <div className="loading">
+                                    Searching for experts...
+                                </div>
+                            )}
+                            
+                            {results && !loading && (
+                                <>
+                                    <div className="search-meta">
+                                        Found {results.search_metadata.total_experts} experts in {results.search_metadata.search_time_ms}ms
+                                    </div>
+                                    
+                                    {results.experts.length === 0 ? (
+                                        <div className="loading">No experts found for your search query.</div>
+                                    ) : (
+                                        results.experts.map(expert => (
+                                            <div key={expert.id} className="expert-card">
+                                                <div className="expert-header">
+                                                    <div className="expert-name">{expert.name}</div>
+                                                    <div className="expert-score">{expert.total_score}</div>
+                                                </div>
+                                                <div className="expert-summary">{expert.summary}</div>
+                                                
+                                                <div className="experiences">
+                                                    {expert.matching_experiences.map(exp => (
+                                                        <div key={exp.id} className="experience">
+                                                            <div className="experience-summary">{exp.summary}</div>
+                                                            <div className="experience-dates">
+                                                                {exp.start_date} to {exp.end_date} (Score: {exp.score})
+                                                            </div>
+                                                            <div className="attributes">
+                                                                {exp.matching_attributes.map(attr => (
+                                                                    <span 
+                                                                        key={attr.id} 
+                                                                        className={`attribute ${attr.type}`}
+                                                                    >
+                                                                        {attr.name}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ExpertSearch />, document.getElementById('root'));
+    </script>
+</body>
+</html>

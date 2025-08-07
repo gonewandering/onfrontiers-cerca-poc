@@ -2,6 +2,7 @@ from flask import request
 from flask_restful import Resource
 from models import Expert, Experience, Attribute
 from lib.llm_extractor import LLMExtractor
+from lib.embedding_service import embedding_service
 from database import get_db_session
 from datetime import datetime
 
@@ -99,11 +100,11 @@ class ExpertResource(Resource):
                 if not text.strip():
                     return {'message': 'Empty text provided'}, 400
                 
-                # Extract structured data using LLM
+                # Extract structured data using fast LLM (no function calling)
                 try:
-                    print(f"DEBUG - Starting LLM extraction for text length: {len(text)} characters")
+                    print(f"DEBUG - Starting FAST LLM extraction for text length: {len(text)} characters")
                     extractor = LLMExtractor()
-                    extracted_data = extractor.extract_expert_data(text)
+                    extracted_data = extractor.extract_expert_data_fast(text)
                     print("DEBUG - LLM extraction successful")
                     print("DEBUG - Extracted data structure:", {
                         'expert_keys': list(extracted_data.get('expert', {}).keys()) if 'expert' in extracted_data else 'No expert key',
@@ -181,27 +182,69 @@ class ExpertResource(Resource):
                     # Create attributes for this experience
                     created_attributes = []
                     
-                    for attr_data in exp_data['attributes']:
-                        # Only process attributes that have a valid ID (existing attributes found by LLM search)
-                        attr_id = attr_data.get('id')
-                        if attr_id is not None and str(attr_id).lower() not in ['none', 'null', '']:
-                            # Use existing attribute by ID
-                            existing_attr = session.query(Attribute).filter(Attribute.id == attr_id).first()
-                            if existing_attr:
-                                # Associate existing attribute with this experience
-                                existing_attr.experiences.append(experience)
-                                created_attributes.append({
-                                    'id': existing_attr.id,
-                                    'name': existing_attr.name,
-                                    'type': existing_attr.type,
-                                    'summary': existing_attr.summary,
-                                    'existing': True
-                                })
-                                print(f"DEBUG - Using existing {existing_attr.type}: {existing_attr.name} (ID: {existing_attr.id})")
-                            else:
-                                print(f"WARNING - Attribute ID {attr_id} not found in database, skipping")
+                    print(f"DEBUG - Processing {len(exp_data.get('attributes', []))} attributes for this experience")
+                    for i, attr_data in enumerate(exp_data.get('attributes', [])):
+                        print(f"DEBUG - Attribute {i+1}: {attr_data}")
+                        
+                        attr_name = attr_data.get('name', '').strip()
+                        attr_type = attr_data.get('type', '').strip()
+                        attr_summary = attr_data.get('summary', '')
+                        
+                        if not attr_name or not attr_type:
+                            print(f"DEBUG - Skipping attribute with missing name or type")
+                            continue
+                            
+                        # Check if attribute already exists (exact name and type match)
+                        existing_attr = session.query(Attribute).filter(
+                            Attribute.name.ilike(attr_name),
+                            Attribute.type == attr_type
+                        ).first()
+                        
+                        if existing_attr:
+                            print(f"DEBUG - Found existing {attr_type}: {attr_name} (ID: {existing_attr.id})")
+                            # Associate existing attribute with this experience
+                            existing_attr.experiences.append(experience)
+                            created_attributes.append({
+                                'id': existing_attr.id,
+                                'name': existing_attr.name,
+                                'type': existing_attr.type,
+                                'summary': existing_attr.summary,
+                                'existing': True
+                            })
                         else:
-                            print(f"DEBUG - Skipping attribute without ID: {attr_data.get('name', 'Unknown')} ({attr_data.get('type', 'Unknown type')})")
+                            print(f"DEBUG - Creating new {attr_type}: {attr_name}")
+                            # Generate embedding for new attribute
+                            try:
+                                embedding = embedding_service.generate_attribute_embedding(
+                                    attr_name, attr_type, attr_summary or f"{attr_type.title()}: {attr_name}"
+                                )
+                                print(f"DEBUG - Generated embedding for {attr_name} ({len(embedding)} dimensions)")
+                            except Exception as e:
+                                print(f"WARNING - Failed to generate embedding for {attr_name}: {str(e)}")
+                                embedding = None
+                            
+                            # Create new attribute
+                            new_attr = Attribute(
+                                name=attr_name,
+                                type=attr_type,  
+                                summary=attr_summary or f"{attr_type.title()}: {attr_name}",
+                                embedding=embedding
+                            )
+                            session.add(new_attr)
+                            session.flush()  # Get the ID
+                            
+                            # Associate new attribute with this experience
+                            new_attr.experiences.append(experience)
+                            created_attributes.append({
+                                'id': new_attr.id,
+                                'name': new_attr.name,
+                                'type': new_attr.type,
+                                'summary': new_attr.summary,
+                                'existing': False
+                            })
+                            print(f"DEBUG - Created and associated new {attr_type}: {attr_name} (ID: {new_attr.id}) with embedding")
+                            
+                    print(f"DEBUG - Created {len(created_attributes)} attribute associations for this experience")
                     
                     created_experiences.append({
                         'start_date': experience.start_date.isoformat(),
@@ -344,11 +387,11 @@ class ExpertListResource(Resource):
                 if not text.strip():
                     return {'message': 'Empty text provided'}, 400
                 
-                # Extract structured data using LLM
+                # Extract structured data using fast LLM (no function calling)
                 try:
-                    print(f"DEBUG - Starting LLM extraction for text length: {len(text)} characters")
+                    print(f"DEBUG - Starting FAST LLM extraction for text length: {len(text)} characters")
                     extractor = LLMExtractor()
-                    extracted_data = extractor.extract_expert_data(text)
+                    extracted_data = extractor.extract_expert_data_fast(text)
                     print("DEBUG - LLM extraction successful")
                     print("DEBUG - Extracted data structure:", {
                         'expert_keys': list(extracted_data.get('expert', {}).keys()) if 'expert' in extracted_data else 'No expert key',
@@ -426,27 +469,69 @@ class ExpertListResource(Resource):
                     # Create attributes for this experience
                     created_attributes = []
                     
-                    for attr_data in exp_data['attributes']:
-                        # Only process attributes that have a valid ID (existing attributes found by LLM search)
-                        attr_id = attr_data.get('id')
-                        if attr_id is not None and str(attr_id).lower() not in ['none', 'null', '']:
-                            # Use existing attribute by ID
-                            existing_attr = session.query(Attribute).filter(Attribute.id == attr_id).first()
-                            if existing_attr:
-                                # Associate existing attribute with this experience
-                                existing_attr.experiences.append(experience)
-                                created_attributes.append({
-                                    'id': existing_attr.id,
-                                    'name': existing_attr.name,
-                                    'type': existing_attr.type,
-                                    'summary': existing_attr.summary,
-                                    'existing': True
-                                })
-                                print(f"DEBUG - Using existing {existing_attr.type}: {existing_attr.name} (ID: {existing_attr.id})")
-                            else:
-                                print(f"WARNING - Attribute ID {attr_id} not found in database, skipping")
+                    print(f"DEBUG - Processing {len(exp_data.get('attributes', []))} attributes for this experience")
+                    for i, attr_data in enumerate(exp_data.get('attributes', [])):
+                        print(f"DEBUG - Attribute {i+1}: {attr_data}")
+                        
+                        attr_name = attr_data.get('name', '').strip()
+                        attr_type = attr_data.get('type', '').strip()
+                        attr_summary = attr_data.get('summary', '')
+                        
+                        if not attr_name or not attr_type:
+                            print(f"DEBUG - Skipping attribute with missing name or type")
+                            continue
+                            
+                        # Check if attribute already exists (exact name and type match)
+                        existing_attr = session.query(Attribute).filter(
+                            Attribute.name.ilike(attr_name),
+                            Attribute.type == attr_type
+                        ).first()
+                        
+                        if existing_attr:
+                            print(f"DEBUG - Found existing {attr_type}: {attr_name} (ID: {existing_attr.id})")
+                            # Associate existing attribute with this experience
+                            existing_attr.experiences.append(experience)
+                            created_attributes.append({
+                                'id': existing_attr.id,
+                                'name': existing_attr.name,
+                                'type': existing_attr.type,
+                                'summary': existing_attr.summary,
+                                'existing': True
+                            })
                         else:
-                            print(f"DEBUG - Skipping attribute without ID: {attr_data.get('name', 'Unknown')} ({attr_data.get('type', 'Unknown type')})")
+                            print(f"DEBUG - Creating new {attr_type}: {attr_name}")
+                            # Generate embedding for new attribute
+                            try:
+                                embedding = embedding_service.generate_attribute_embedding(
+                                    attr_name, attr_type, attr_summary or f"{attr_type.title()}: {attr_name}"
+                                )
+                                print(f"DEBUG - Generated embedding for {attr_name} ({len(embedding)} dimensions)")
+                            except Exception as e:
+                                print(f"WARNING - Failed to generate embedding for {attr_name}: {str(e)}")
+                                embedding = None
+                            
+                            # Create new attribute
+                            new_attr = Attribute(
+                                name=attr_name,
+                                type=attr_type,  
+                                summary=attr_summary or f"{attr_type.title()}: {attr_name}",
+                                embedding=embedding
+                            )
+                            session.add(new_attr)
+                            session.flush()  # Get the ID
+                            
+                            # Associate new attribute with this experience
+                            new_attr.experiences.append(experience)
+                            created_attributes.append({
+                                'id': new_attr.id,
+                                'name': new_attr.name,
+                                'type': new_attr.type,
+                                'summary': new_attr.summary,
+                                'existing': False
+                            })
+                            print(f"DEBUG - Created and associated new {attr_type}: {attr_name} (ID: {new_attr.id}) with embedding")
+                            
+                    print(f"DEBUG - Created {len(created_attributes)} attribute associations for this experience")
                     
                     created_experiences.append({
                         'start_date': experience.start_date.isoformat(),

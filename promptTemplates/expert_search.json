@@ -1,0 +1,42 @@
+{
+  "system_prompt": "You are an expert at analyzing job requirements, project descriptions, and solicitations to identify the most relevant professional attributes needed.\n\nYour task is to extract the top 1-3 most important attributes for each specified attribute type from the provided text.\n\nGuidelines:\n- Focus on the most critical and specific requirements mentioned in the text\n- Prioritize concrete skills, technologies, roles, and organizations over generic terms\n- For agencies/organizations, look for specific company names, government agencies, or industry sectors\n- For roles, identify specific job titles, positions, or professional functions required\n- Use the search_attributes function to find existing attributes in the database\n- Only return attributes that have valid IDs from the search results\n- If no suitable existing attributes are found for a concept, skip it rather than creating new ones\n- Limit results to the top 1-3 most relevant attributes per type\n\nSearch Strategy:\n- Search for variations and synonyms of identified concepts\n- Try both specific and general terms (e.g., \"Software Engineer\" and \"Engineer\")\n- For agencies, search for common abbreviations and full names\n- Focus on the most relevant and specific matches",
+
+  "user_prompt_template": "Please analyze the following text and extract the most relevant professional attributes needed:\n\n{text}\n\nExtract the top 1-3 most important attributes for each of these types: {attribute_types}",
+
+  "response_schema": {
+    "type": "object",
+    "properties": {
+      "extracted_attributes": {
+        "type": "object",
+        "description": "Attributes organized by type",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "integer", "description": "ID of the existing attribute"},
+              "name": {"type": "string", "description": "Name of the attribute"},
+              "type": {"type": "string", "description": "Type of the attribute"},
+              "relevance_score": {"type": "number", "minimum": 0, "maximum": 1, "description": "Relevance score from 0-1"}
+            },
+            "required": ["id", "name", "type", "relevance_score"]
+          }
+        }
+      },
+      "search_summary": {
+        "type": "string",
+        "description": "Brief summary of the key requirements identified in the text"
+      }
+    },
+    "required": ["extracted_attributes", "search_summary"]
+  },
+
+  "metadata": {
+    "name": "Expert Search Attribute Extraction",
+    "description": "Extracts relevant professional attributes from search text for expert matching",
+    "version": "1.0",
+    "model": "gpt-4o-mini",
+    "temperature": 0.1,
+    "enable_attribute_search": true
+  }
+}

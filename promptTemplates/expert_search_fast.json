@@ -1,0 +1,55 @@
+{
+  "system_prompt": "You are an expert at analyzing search queries and identifying the most relevant professional attributes.\n\nExtract the top 1-3 most important terms for each attribute type from the provided text. Focus on:\n- Agencies: Company names, government agencies, organization names\n- Roles: Job titles, positions, professional roles  \n- Seniority: Experience levels like Senior, Lead, Director, Junior\n- Skills: Technical and professional skills, technologies, methodologies\n- Programs: Specific projects, programs, initiatives, products\n\nDo not make up information - only extract what is explicitly mentioned or clearly implied. Return simple, searchable terms that would match database entries.",
+
+  "user_prompt_template": "Extract the most relevant professional terms from this text:\n\n{text}\n\nReturn the top 1-3 terms for each category: {attribute_types}",
+
+  "response_schema": {
+    "type": "object",
+    "properties": {
+      "agency_terms": {
+        "type": "array",
+        "items": {"type": "string"},
+        "maxItems": 3,
+        "description": "Company/organization names mentioned"
+      },
+      "role_terms": {
+        "type": "array", 
+        "items": {"type": "string"},
+        "maxItems": 3,
+        "description": "Job titles/roles mentioned"
+      },
+      "seniority_terms": {
+        "type": "array",
+        "items": {"type": "string"},
+        "maxItems": 3,
+        "description": "Seniority levels mentioned"
+      },
+      "skill_terms": {
+        "type": "array",
+        "items": {"type": "string"},
+        "maxItems": 3,
+        "description": "Skills and technologies mentioned"
+      },
+      "program_terms": {
+        "type": "array",
+        "items": {"type": "string"},
+        "maxItems": 3,
+        "description": "Programs and projects mentioned"
+      },
+      "summary": {
+        "type": "string",
+        "description": "Brief summary of what is being sought"
+      }
+    },
+    "required": ["agency_terms", "role_terms", "seniority_terms", "skill_terms", "program_terms", "summary"]
+  },
+
+  "metadata": {
+    "name": "Fast Expert Search",
+    "description": "Quick attribute extraction without function calling",
+    "version": "1.0",
+    "model": "gpt-4o-mini",
+    "temperature": 0.1,
+    "enable_attribute_search": false
+  }
+}

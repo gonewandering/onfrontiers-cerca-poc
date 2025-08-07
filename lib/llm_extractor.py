@@ -29,6 +29,58 @@ class LLMExtractor:
         with open(template_path, 'r') as f:
             return json.load(f)
     
+    def create_or_get_attribute(self, attribute_type: str, attribute_name: str, summary: str = None) -> Dict[str, Any]:
+        """
+        Create a new attribute or return existing one with the same name and type
+        
+        Args:
+            attribute_type: Type of attribute (agency, role, etc.)
+            attribute_name: Name of the attribute
+            summary: Optional summary/description
+            
+        Returns:
+            Dictionary with attribute info (id, name, type, summary)
+        """
+        try:
+            url = f"{self.api_base_url}/api/attributes"
+            
+            # First, try to find existing attribute with exact name and type
+            params = {
+                'type': attribute_type,
+                'q': attribute_name,
+                'limit': 50  # Get more results to find exact matches
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            existing_attributes = response.json().get('attributes', [])
+            
+            # Look for exact match (case-insensitive)
+            for attr in existing_attributes:
+                if (attr.get('name', '').lower() == attribute_name.lower() and 
+                    attr.get('type', '').lower() == attribute_type.lower()):
+                    print(f"DEBUG - Found existing {attribute_type}: {attribute_name} (ID: {attr['id']})")
+                    return attr
+            
+            # No exact match found, create new attribute
+            create_data = {
+                'name': attribute_name.strip(),
+                'type': attribute_type,
+                'summary': summary or f"{attribute_type.title()}: {attribute_name}"
+            }
+            
+            create_response = requests.post(url, json=create_data, timeout=10)
+            create_response.raise_for_status()
+            
+            new_attribute = create_response.json()
+            print(f"DEBUG - Created new {attribute_type}: {attribute_name} (ID: {new_attribute.get('id')})")
+            return new_attribute
+            
+        except Exception as e:
+            print(f"Warning: Failed to create/get attribute '{attribute_name}' ({attribute_type}): {str(e)}")
+            return {}
+
     def search_attributes(self, attribute_type: str, search_query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
         Search for existing attributes by type and query
@@ -263,3 +315,77 @@ class LLMExtractor:
             Structured expert data as dictionary
         """
         return self.extract_from_template("expert_extraction", {"text": text})
+    
+    def extract_expert_data_fast(self, text: str) -> Dict[str, Any]:
+        """
+        Fast expert data extraction without function calling
+        
+        Args:
+            text: Unstructured text input (resume, bio, etc.)
+            
+        Returns:
+            Structured expert data with attribute terms for separate searching
+        """
+        import time
+        
+        # Step 1: Extract basic structure without function calling
+        extraction_start = time.time()
+        raw_data = self.extract_from_template("expert_extraction_fast", {"text": text})
+        extraction_time = time.time() - extraction_start
+        print(f"DEBUG - Fast extraction completed in {extraction_time:.2f}s")
+        
+        # Step 2: Search for attributes in database
+        search_start = time.time()
+        experiences = []
+        
+        for exp_data in raw_data.get('experiences', []):
+            # Handle "present" dates
+            end_date = exp_data.get('end_date', '')
+            if end_date.lower() in ['present', 'current', 'ongoing', 'now']:
+                from datetime import datetime
+                end_date = datetime.now().date().isoformat()
+            
+            experience = {
+                'start_date': exp_data.get('start_date'),
+                'end_date': end_date,
+                'summary': exp_data.get('summary', ''),
+                'attributes': []
+            }
+            
+            # Process all configured attribute types dynamically
+            total_processed = 0
+            total_skipped = 0
+            
+            for attr_type in SEARCHABLE_ATTRIBUTE_TYPES:
+                attr_key = f"{attr_type}_terms"
+                terms = exp_data.get(attr_key, [])
+                
+                for term in terms:
+                    if term.strip():
+                        experience['attributes'].append({
+                            'name': term,
+                            'type': attr_type,
+                            'summary': f"{attr_type.title()}: {term}"
+                        })
+                        total_processed += 1
+                
+                if terms:
+                    print(f"DEBUG - Processed {len(terms)} {attr_type} terms")
+            
+            # Count skipped terms (other_terms not in configured types)
+            other_terms = exp_data.get('other_terms', [])
+            if other_terms:
+                total_skipped = len(other_terms)
+                print(f"DEBUG - Skipped {total_skipped} other_terms (not in SEARCHABLE_ATTRIBUTE_TYPES: {SEARCHABLE_ATTRIBUTE_TYPES})")
+            
+            print(f"DEBUG - Total processed: {total_processed} attributes, skipped: {total_skipped}")
+            
+            experiences.append(experience)
+        
+        search_time = time.time() - search_start  
+        print(f"DEBUG - Attribute search completed in {search_time:.2f}s")
+        
+        return {
+            'expert': raw_data.get('expert', {}),
+            'experiences': experiences
+        }

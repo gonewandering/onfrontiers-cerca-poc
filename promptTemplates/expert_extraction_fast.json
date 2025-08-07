@@ -1,0 +1,78 @@
+{
+  "system_prompt": "You are an expert at extracting structured professional information from unstructured text.\nYour task is to analyze the provided text and extract information according to the structured output format.\n\nGuidelines:\n- Extract all relevant professional experiences, even if dates are approximate\n- For each experience, identify key information across these categories:\n  * Agency: Company/organization names (e.g., 'Google', 'US Army', 'Stanford University')\n  * Role: Job titles and positions (e.g., 'Software Engineer', 'Program Manager', 'Consultant')\n  * Seniority: Experience levels and career progression indicators (e.g., 'Senior', 'Lead', 'Director', 'Junior')\n  * Skill: Technical and professional skills (e.g., 'Python', 'Project Management', 'Data Analysis')\n  * Program: Specific projects, programs, or initiatives (e.g., 'Windows 11', 'Mars Rover', 'COVID Response')\n- If exact dates are not provided, make reasonable estimates based on context (use YYYY-MM-DD format)\n- For ongoing/current positions, use 'present' as the end_date\n- If information is missing, do not make up data - provide reasonable defaults or skip optional fields\n- Focus on professional and educational experiences\n- Extract simple, searchable terms that would match database entries\n- Separate compound terms when possible (e.g., 'Senior Software Engineer' → seniority: 'Senior', role: 'Software Engineer')",
+  
+  "user_prompt_template": "Please extract structured professional information from the following text:\n\n{text}",
+  
+  "response_schema": {
+    "type": "object",
+    "properties": {
+      "expert": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "summary": {"type": "string"}
+        },
+        "required": ["name", "summary"]
+      },
+      "experiences": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "start_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+            "end_date": {"type": "string"},
+            "summary": {"type": "string"},
+            "agency_terms": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Company/organization names for this experience"
+            },
+            "role_terms": {
+              "type": "array", 
+              "items": {"type": "string"},
+              "description": "Job titles/roles for this experience"
+            },
+            "seniority_terms": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Seniority levels and career progression indicators (e.g., Senior, Lead, Director, Junior)"
+            },
+            "skill_terms": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Technical and professional skills for this experience"
+            },
+            "program_terms": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Specific projects, programs, or initiatives for this experience"
+            },
+            "other_terms": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "type": {"type": "string", "enum": ["technology", "certification", "achievement", "domain"]}
+                },
+                "required": ["name", "type"]
+              },
+              "description": "Other attributes not captured in the main categories"
+            }
+          },
+          "required": ["start_date", "end_date", "summary"]
+        }
+      }
+    },
+    "required": ["expert", "experiences"]
+  },
+  
+  "metadata": {
+    "name": "Fast Expert Extraction",
+    "description": "Extracts structured professional information without function calling for better performance",
+    "version": "2.0",
+    "model": "gpt-4o-mini",
+    "temperature": 0.1,
+    "enable_attribute_search": false
+  }
+}

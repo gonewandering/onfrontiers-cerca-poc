@@ -1,18 +1,19 @@
 {
   "family": "cerca-api",
   "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
   "cpu": "512",
   "memory": "1024",
   "executionRoleArn": "arn:aws:iam::471112664201:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::471112664201:role/ecsTaskRole", 
   "containerDefinitions": [
     {
       "name": "cerca-api",
       "image": "cerca-api:latest",
       "portMappings": [
         {
-          "containerPort": 5000,
+          "containerPort": 5001,
           "protocol": "tcp"
         }
       ],
@@ -24,7 +25,7 @@
         },
         {
           "name": "PORT",
-          "value": "5000"
+          "value": "5001"
         },
         {
           "name": "FLASK_DEBUG",
@@ -37,14 +38,14 @@
           "valueFrom": "arn:aws:secretsmanager:us-east-1:471112664201:secret:cerca/database-url"
         },
         {
-          "name": "OPENAI_API_KEY", 
+          "name": "OPENAI_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:471112664201:secret:cerca/openai-api-key"
         }
       ],
       "healthCheck": {
         "command": [
           "CMD-SHELL",
-          "curl -f http://localhost:5000/health || exit 1"
+          "curl -f http://localhost:5001/health || exit 1"
         ],
         "interval": 30,
         "timeout": 10,

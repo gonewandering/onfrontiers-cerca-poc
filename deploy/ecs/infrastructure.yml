@@ -84,8 +84,8 @@ Resources:
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 5000
-          ToPort: 5000
+          FromPort: 5001
+          ToPort: 5001
           SourceSecurityGroupId: !Ref ALBSecurityGroup
       Tags:
         - Key: Name
@@ -96,7 +96,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Name: cerca-api-tg
-      Port: 5000
+      Port: 5001
       Protocol: HTTP
       VpcId: !Ref VpcId
       TargetType: ip
@@ -199,14 +199,14 @@ Resources:
         - Name: cerca-api
           Image: 471112664201.dkr.ecr.us-east-1.amazonaws.com/cerca-api:latest
           PortMappings:
-            - ContainerPort: 5000
+            - ContainerPort: 5001
               Protocol: tcp
           Essential: true
           Environment:
             - Name: FLASK_HOST
               Value: 0.0.0.0
             - Name: PORT
-              Value: "5000"
+              Value: "5001"
             - Name: FLASK_DEBUG
               Value: "false"
           Secrets:
@@ -217,7 +217,7 @@ Resources:
           HealthCheck:
             Command:
               - CMD-SHELL
-              - curl -f http://localhost:5000/health || exit 1
+              - curl -f http://localhost:5001/health || exit 1
             Interval: 30
             Timeout: 10
             Retries: 3
@@ -249,7 +249,7 @@ Resources:
       LoadBalancers:
         - TargetGroupArn: !Ref TargetGroup
           ContainerName: cerca-api
-          ContainerPort: 5000
+          ContainerPort: 5001
       HealthCheckGracePeriodSeconds: 120
       DeploymentConfiguration:
         MaximumPercent: 200

@@ -28,7 +28,8 @@ aws ecr create-repository --repository-name ${REPOSITORY_NAME} --region ${REGION
 
 # Build Docker image
 echo "🏗️  Building Docker image..."
-docker build -t ${REPOSITORY_NAME}:${IMAGE_TAG} .
+docker buildx create --use --name cerca_builder 2>/dev/null || true
+docker buildx build --platform linux/amd64 -t ${REPOSITORY_NAME}:${IMAGE_TAG} . --load
 
 # Tag image for ECR
 echo "🏷️  Tagging image for ECR..."

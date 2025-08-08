@@ -1,4 +1,10 @@
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
 from flask import Flask, send_from_directory
 from flask_restful import Api
 from flask_migrate import Migrate
@@ -11,8 +17,6 @@ from routes.attributes import AttributeResource, AttributeListResource
 from routes.search import ExpertSearchResource
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:cerca123@uf-cerca-v1.cluster-cxgooo0scwa0.us-east-1.rds.amazonaws.com/cerca')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Create a mock db object for Flask-Migrate
 class MockDB:
@@ -47,6 +51,11 @@ def hello_world():
 def health_check():
     return {"status": "healthy", "service": "cerca-api"}
 
+@app.route("/ui/experts")
+def experts_list_ui():
+    return send_from_directory('static', 'experts.html')
+
+
 @app.route("/ui/search")
 def search_ui():
     return '''<!DOCTYPE html>
@@ -67,7 +76,26 @@ def search_ui():
         }
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 20px; text-align: center;
+            color: white; padding: 20px; text-align: center; position: relative;
+        }
+        
+        .nav-links {
+            position: absolute; top: 20px; left: 20px; display: flex; gap: 15px;
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9); text-decoration: none; padding: 8px 16px;
+            border-radius: 20px; background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px); transition: all 0.3s ease;
+            font-size: 14px; font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2); color: white; transform: translateY(-1px);
+        }
+        
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.3); color: white;
         }
         .content { padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
         .controls { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
@@ -221,6 +249,10 @@ def search_ui():
 <body>
     <div class="container">
         <div class="header">
+            <div class="nav-links">
+                <a href="/ui/search" class="nav-link active">🔍 Search</a>
+                <a href="/ui/experts" class="nav-link">👥 All Experts</a>
+            </div>
             <h1>Expert Search - Weight Testing</h1>
             <p>Customize attribute weights to see how they affect search results</p>
         </div>
@@ -551,7 +583,7 @@ You can enter multiple lines of text, such as:
 
 if __name__ == '__main__':
     # Use environment variables for production configuration
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.getenv('PORT', 5001))
     debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     host = os.getenv('FLASK_HOST', '0.0.0.0')
     

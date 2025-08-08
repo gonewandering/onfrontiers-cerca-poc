@@ -6,67 +6,39 @@ from lib.embedding_service import embedding_service
 from database import get_db_session
 from config import SEARCHABLE_ATTRIBUTE_TYPES, ATTRIBUTE_MATCHING_THRESHOLD
 from datetime import datetime
+from sqlalchemy import text
 
 class ExpertResource(Resource):
-    def get(self, expert_id=None):
+    def get(self, expert_id):
         session = get_db_session()
         try:
-            if expert_id:
-                expert = session.query(Expert).filter(Expert.id == expert_id).first()
-                if not expert:
-                    return {'message': 'Expert not found'}, 404
-                return {
-                    'id': expert.id,
-                    'name': expert.name,
-                    'summary': expert.summary,
-                    'status': expert.status,
-                    'meta': expert.meta,
-                    'experiences': [
-                        {
-                            'id': exp.id,
-                            'start_date': exp.start_date.isoformat(),
-                            'end_date': exp.end_date.isoformat(),
-                            'summary': exp.summary,
-                            'attributes': [
-                                {
-                                    'id': attr.id,
-                                    'name': attr.name,
-                                    'type': attr.type,
-                                    'summary': attr.summary
-                                } for attr in exp.attributes
-                            ]
-                        } for exp in expert.experiences
-                    ]
-                }
-            else:
-                experts = session.query(Expert).all()
-                return {
-                    'experts': [
-                        {
-                            'id': expert.id,
-                            'name': expert.name,
-                            'summary': expert.summary,
-                            'status': expert.status,
-                            'meta': expert.meta,
-                            'experiences': [
-                                {
-                                    'id': exp.id,
-                                    'start_date': exp.start_date.isoformat(),
-                                    'end_date': exp.end_date.isoformat(),
-                                    'summary': exp.summary,
-                                    'attributes': [
-                                        {
-                                            'id': attr.id,
-                                            'name': attr.name,
-                                            'type': attr.type,
-                                            'summary': attr.summary
-                                        } for attr in exp.attributes
-                                    ]
-                                } for exp in expert.experiences
-                            ]
-                        } for expert in experts
-                    ]
-                }
+            expert = session.query(Expert).filter(Expert.id == expert_id).first()
+            if not expert:
+                return {'message': 'Expert not found'}, 404
+            
+            return {
+                'id': expert.id,
+                'name': expert.name,
+                'summary': expert.summary,
+                'status': expert.status,
+                'meta': expert.meta,
+                'experiences': [
+                    {
+                        'id': exp.id,
+                        'start_date': exp.start_date.isoformat(),
+                        'end_date': exp.end_date.isoformat(),
+                        'summary': exp.summary,
+                        'attributes': [
+                            {
+                                'id': attr.id,
+                                'name': attr.name,
+                                'type': attr.type,
+                                'summary': attr.summary
+                            } for attr in exp.attributes
+                        ]
+                    } for exp in expert.experiences
+                ]
+            }
         finally:
             session.close()
 
@@ -269,33 +241,71 @@ class ExpertListResource(Resource):
     def get(self):
         session = get_db_session()
         try:
-            experts = session.query(Expert).all()
+            # Get pagination parameters with error handling
+            try:
+                page = max(1, int(request.args.get('page', 1)))
+                page_size = max(1, min(int(request.args.get('page_size', 20)), 100))  # Max 100 per page
+            except ValueError:
+                page = 1
+                page_size = 20
+            
+            # Calculate offset
+            offset = (page - 1) * page_size
+            
+            # Get total count
+            total_count = session.query(Expert).count()
+            
+            # Get paginated experts - basic info only, no joins
+            experts_query = session.query(Expert).offset(offset).limit(page_size)
+            experts = experts_query.all()
+            
+            # Build response with basic info only
+            expert_data = []
+            for expert in experts:
+                # Calculate stats efficiently using separate queries
+                total_experiences = session.query(Experience).filter(Experience.expert_id == expert.id).count()
+                total_attributes = session.execute(text("""
+                    SELECT COUNT(a.id) 
+                    FROM attribute a 
+                    JOIN experience_attribute ea ON a.id = ea.attribute_id 
+                    JOIN experience e ON ea.experience_id = e.id 
+                    WHERE e.expert_id = :expert_id
+                """), {'expert_id': expert.id}).scalar() or 0
+                
+                unique_types = session.execute(text("""
+                    SELECT COUNT(DISTINCT a.type) 
+                    FROM attribute a 
+                    JOIN experience_attribute ea ON a.id = ea.attribute_id 
+                    JOIN experience e ON ea.experience_id = e.id 
+                    WHERE e.expert_id = :expert_id
+                """), {'expert_id': expert.id}).scalar() or 0
+                
+                expert_data.append({
+                    'id': expert.id,
+                    'name': expert.name,
+                    'summary': expert.summary,
+                    'status': expert.status,
+                    'meta': expert.meta,
+                    'stats': {
+                        'total_experiences': total_experiences,
+                        'total_attributes': total_attributes,
+                        'unique_attribute_types': unique_types
+                    }
+                })
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size
+            
             return {
-                'experts': [
-                    {
-                        'id': expert.id,
-                        'name': expert.name,
-                        'summary': expert.summary,
-                        'status': expert.status,
-                        'meta': expert.meta,
-                        'experiences': [
-                            {
-                                'id': exp.id,
-                                'start_date': exp.start_date.isoformat(),
-                                'end_date': exp.end_date.isoformat(),
-                                'summary': exp.summary,
-                                'attributes': [
-                                    {
-                                        'id': attr.id,
-                                        'name': attr.name,
-                                        'type': attr.type,
-                                        'summary': attr.summary
-                                    } for attr in exp.attributes
-                                ]
-                            } for exp in expert.experiences
-                        ]
-                    } for expert in experts
-                ]
+                'experts': expert_data,
+                'pagination': {
+                    'page': page,
+                    'page_size': page_size,
+                    'total_count': total_count,
+                    'total_pages': total_pages,
+                    'has_next': page < total_pages,
+                    'has_prev': page > 1
+                }
             }
         finally:
             session.close()

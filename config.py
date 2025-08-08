@@ -1,6 +1,10 @@
 # Attributes configuration for LLM function calling
 
-OPENAI_API_KEY = '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'
+import os
+
+# Important: do not hardcode API keys in source. Use environment variables instead.
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+# OPENAI_API_KEY previously hardcoded has been removed
 SEARCHABLE_ATTRIBUTE_TYPES = ["agency", "role", "seniority", "skill", "program"]
 
 # Minimum similarity threshold for database attribute matching

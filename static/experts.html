@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Experts - Cerca</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .nav-links {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .pagination-info {
+            font-size: 14px;
+            color: #6c757d;
+            white-space: nowrap;
+        }
+        
+        .pagination-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .page-button {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #495057;
+            transition: all 0.2s;
+            min-width: 32px;
+            text-align: center;
+        }
+        
+        .page-button:hover:not(:disabled) {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .page-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .page-button.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .page-size-select {
+            padding: 4px 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            font-size: 14px;
+        }
+        
+        .expert-count {
+            font-size: 16px;
+            color: #6c757d;
+        }
+        
+        .view-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .control-button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .control-button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        
+        .control-button.secondary {
+            background: #6c757d;
+        }
+        
+        .control-button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .experts-grid {
+            display: grid;
+            gap: 16px;
+        }
+        
+        .expert-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .expert-card:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .expert-header {
+            padding: 16px 20px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        .expert-header:hover {
+            background: #e9ecef;
+        }
+        
+        .expert-header.expanded {
+            background: #667eea;
+            color: white;
+        }
+        
+        .expert-info {
+            flex: 1;
+        }
+        
+        .expert-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #343a40;
+            margin-bottom: 4px;
+        }
+        
+        .expert-header.expanded .expert-name {
+            color: white;
+        }
+        
+        .expert-summary {
+            color: #6c757d;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        
+        .expert-header.expanded .expert-summary {
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .expert-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .expert-header.expanded .expert-meta {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .expand-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .expert-header.expanded .expand-indicator {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: rotate(180deg);
+        }
+        
+        .expert-details {
+            display: none;
+            padding: 20px;
+            background: white;
+        }
+        
+        .expert-details.expanded {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .experiences-section {
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #343a40;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-icon {
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+        }
+        
+        .experience {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .experience-summary {
+            font-weight: 500;
+            color: #343a40;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .experience-dates {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .date-range {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        .duration {
+            color: #6c757d;
+        }
+        
+        .attributes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .attribute {
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            transition: all 0.2s ease;
+        }
+        
+        .attribute:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .attribute.agency { 
+            background: #e3f2fd; 
+            color: #1565c0; 
+            border-color: #90caf9;
+        }
+        
+        .attribute.role { 
+            background: #f3e5f5; 
+            color: #7b1fa2; 
+            border-color: #ce93d8;
+        }
+        
+        .attribute.skill { 
+            background: #e8f5e8; 
+            color: #2e7d32; 
+            border-color: #a5d6a7;
+        }
+        
+        .attribute.seniority { 
+            background: #fff3e0; 
+            color: #ef6c00; 
+            border-color: #ffcc02;
+        }
+        
+        .attribute.program { 
+            background: #fce4ec; 
+            color: #c2185b; 
+            border-color: #f8bbd9;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+        
+        .no-data h3 {
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #667eea;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+            
+            .view-controls {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .pagination {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+            
+            .pagination-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .page-button {
+                min-width: 28px;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            
+            .nav-links {
+                position: relative;
+                top: auto;
+                left: auto;
+                justify-content: center;
+                margin-bottom: 10px;
+            }
+            
+            .expert-meta {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="nav-links">
+                <a href="/ui/search" class="nav-link">🔍 Search</a>
+                <a href="/ui/experts" class="nav-link active">👥 All Experts</a>
+            </div>
+            <h1>All Experts</h1>
+            <p>Browse and explore all catalogued experts with their experiences and attributes</p>
+        </div>
+        
+        <div class="content">
+            <div class="controls">
+                <div class="expert-count" id="expertCount">
+                    Loading experts...
+                </div>
+                
+                <div class="pagination" id="paginationContainer">
+                    <div class="pagination-info" id="paginationInfo">
+                        <!-- Pagination info will be inserted here -->
+                    </div>
+                    <div class="pagination-controls" id="paginationControls">
+                        <!-- Pagination controls will be inserted here -->
+                    </div>
+                </div>
+                
+                <div class="view-controls">
+                    <div class="page-size-selector">
+                        <span>Show:</span>
+                        <select class="page-size-select" id="pageSizeSelect" onchange="changePageSize()">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                    <button class="control-button" onclick="expandAll()">Expand All</button>
+                    <button class="control-button secondary" onclick="collapseAll()">Collapse All</button>
+                </div>
+            </div>
+            
+            <div id="expertsContainer">
+                <div class="loading">
+                    Loading experts...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let expertsData = [];
+        let expandedExperts = new Set();
+        let expertDetailsCache = new Map(); // Cache for loaded expert details
+        let currentPage = 1;
+        let pageSize = 20;
+        let totalCount = 0;
+        let totalPages = 0;
+        let isLoading = false;
+        
+        // Load experts when page loads
+        document.addEventListener('DOMContentLoaded', () => loadExperts(1));
+        
+        async function loadExperts(page = 1, newPageSize = null) {
+            if (isLoading) return;
+            
+            if (newPageSize) {
+                pageSize = newPageSize;
+                page = 1; // Reset to first page when page size changes
+            }
+            
+            isLoading = true;
+            const container = document.getElementById('expertsContainer');
+            const countElement = document.getElementById('expertCount');
+            
+            // Show loading state
+            container.innerHTML = '<div class="loading">Loading experts...</div>';
+            countElement.textContent = 'Loading experts...';
+            
+            try {
+                const response = await fetch(`/api/experts?page=${page}&page_size=${pageSize}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                expertsData = data.experts || [];
+                currentPage = data.pagination.page;
+                pageSize = data.pagination.page_size;
+                totalCount = data.pagination.total_count;
+                totalPages = data.pagination.total_pages;
+                
+                if (totalCount === 0) {
+                    container.innerHTML = `
+                        <div class="no-data">
+                            <h3>No Experts Found</h3>
+                            <p>No experts have been added to the system yet.</p>
+                        </div>
+                    `;
+                    countElement.textContent = 'No experts found';
+                    document.getElementById('paginationContainer').style.display = 'none';
+                    return;
+                }
+                
+                // Update count and pagination
+                countElement.textContent = `${totalCount} expert${totalCount !== 1 ? 's' : ''} total`;
+                updatePaginationControls();
+                
+                // Render experts
+                renderExperts();
+                
+            } catch (error) {
+                console.error('Failed to load experts:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        Failed to load experts: ${error.message}
+                    </div>
+                `;
+                countElement.textContent = 'Error loading experts';
+            } finally {
+                isLoading = false;
+            }
+        }
+        
+        function updatePaginationControls() {
+            const paginationInfo = document.getElementById('paginationInfo');
+            const paginationControls = document.getElementById('paginationControls');
+            
+            // Update pagination info
+            const startItem = (currentPage - 1) * pageSize + 1;
+            const endItem = Math.min(currentPage * pageSize, totalCount);
+            paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalCount}`;
+            
+            // Update pagination controls
+            let controlsHtml = '';
+            
+            // Previous button
+            controlsHtml += `<button class="page-button" onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>‹ Prev</button>`;
+            
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            // Adjust start if end is at maximum
+            if (endPage === totalPages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // First page if not visible
+            if (startPage > 1) {
+                controlsHtml += `<button class="page-button" onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) {
+                    controlsHtml += `<span class="page-button" style="border:none;cursor:default;">...</span>`;
+                }
+            }
+            
+            // Visible page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                controlsHtml += `<button class="page-button ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            
+            // Last page if not visible
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    controlsHtml += `<span class="page-button" style="border:none;cursor:default;">...</span>`;
+                }
+                controlsHtml += `<button class="page-button" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            // Next button
+            controlsHtml += `<button class="page-button" onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Next ›</button>`;
+            
+            paginationControls.innerHTML = controlsHtml;
+            
+            // Show pagination container
+            document.getElementById('paginationContainer').style.display = totalPages > 1 ? 'flex' : 'none';
+        }
+        
+        function goToPage(page) {
+            if (page >= 1 && page <= totalPages && page !== currentPage) {
+                loadExperts(page);
+            }
+        }
+        
+        function changePageSize() {
+            const newPageSize = parseInt(document.getElementById('pageSizeSelect').value);
+            loadExperts(1, newPageSize);
+        }
+        
+        function renderExperts() {
+            const container = document.getElementById('expertsContainer');
+            
+            const expertsGrid = document.createElement('div');
+            expertsGrid.className = 'experts-grid';
+            
+            expertsData.forEach(expert => {
+                const expertCard = createExpertCard(expert);
+                expertsGrid.appendChild(expertCard);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(expertsGrid);
+        }
+        
+        function createExpertCard(expert) {
+            const card = document.createElement('div');
+            card.className = 'expert-card';
+            card.id = `expert-${expert.id}`;
+            
+            // Use stats from API response or calculate if experiences are loaded
+            const stats = expert.stats || {
+                total_experiences: expert.experiences?.length || 0,
+                total_attributes: expert.experiences?.reduce((sum, exp) => sum + (exp.attributes?.length || 0), 0) || 0,
+                unique_attribute_types: expert.experiences ? new Set(expert.experiences.flatMap(exp => exp.attributes?.map(attr => attr.type) || [])).size : 0
+            };
+            
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'expert-header';
+            header.onclick = () => toggleExpert(expert.id);
+            
+            header.innerHTML = `
+                <div class="expert-info">
+                    <div class="expert-name">${escapeHtml(expert.name)}</div>
+                    <div class="expert-summary">${escapeHtml(expert.summary || 'No summary available')}</div>
+                    <div class="expert-meta">
+                        <div class="meta-item">
+                            <span>📋</span>
+                            <span>${stats.total_experiences} experience${stats.total_experiences !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>🏷️</span>
+                            <span>${stats.total_attributes} attribute${stats.total_attributes !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>🎯</span>
+                            <span>${stats.unique_attribute_types} type${stats.unique_attribute_types !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="expand-indicator">
+                    ▼
+                </div>
+            `;
+            
+            // Create details section
+            const details = document.createElement('div');
+            details.className = 'expert-details';
+            details.innerHTML = '<div class="loading">Loading details...</div>'; // Will be populated when expanded
+            
+            card.appendChild(header);
+            card.appendChild(details);
+            
+            return card;
+        }
+        
+        function createExpertDetails(expert) {
+            let html = '';
+            
+            if (expert.experiences && expert.experiences.length > 0) {
+                html += `
+                    <div class="experiences-section">
+                        <div class="section-title">
+                            <div class="section-icon">📋</div>
+                            Experience History
+                        </div>
+                `;
+                
+                expert.experiences.forEach(exp => {
+                    const startDate = new Date(exp.start_date).toLocaleDateString();
+                    const endDate = new Date(exp.end_date).toLocaleDateString();
+                    const duration = calculateDuration(exp.start_date, exp.end_date);
+                    
+                    html += `
+                        <div class="experience">
+                            <div class="experience-summary">${escapeHtml(exp.summary)}</div>
+                            <div class="experience-dates">
+                                <span class="date-range">${startDate} - ${endDate}</span>
+                                <span class="duration">(${duration})</span>
+                            </div>
+                    `;
+                    
+                    if (exp.attributes && exp.attributes.length > 0) {
+                        html += '<div class="attributes">';
+                        exp.attributes.forEach(attr => {
+                            html += `
+                                <span class="attribute ${attr.type}" title="${escapeHtml(attr.summary || '')}">
+                                    ${escapeHtml(attr.name)}
+                                </span>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                });
+                
+                html += '</div>';
+            } else {
+                html += `
+                    <div class="experiences-section">
+                        <div class="section-title">
+                            <div class="section-icon">📋</div>
+                            Experience History
+                        </div>
+                        <div style="color: #6c757d; font-style: italic; padding: 20px; text-align: center;">
+                            No experiences recorded for this expert yet.
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+        
+        async function toggleExpert(expertId) {
+            const card = document.getElementById(`expert-${expertId}`);
+            const header = card.querySelector('.expert-header');
+            const details = card.querySelector('.expert-details');
+            
+            if (expandedExperts.has(expertId)) {
+                // Collapse
+                expandedExperts.delete(expertId);
+                header.classList.remove('expanded');
+                details.classList.remove('expanded');
+            } else {
+                // Expand
+                expandedExperts.add(expertId);
+                header.classList.add('expanded');
+                details.classList.add('expanded');
+                
+                // Load details if not cached
+                if (!expertDetailsCache.has(expertId)) {
+                    details.innerHTML = '<div class="loading">Loading details...</div>';
+                    
+                    try {
+                        const response = await fetch(`/api/experts/${expertId}`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const expertData = await response.json();
+                        expertDetailsCache.set(expertId, expertData);
+                        details.innerHTML = createExpertDetails(expertData);
+                    } catch (error) {
+                        console.error(`Failed to load details for expert ${expertId}:`, error);
+                        details.innerHTML = `<div class="error">Failed to load details: ${error.message}</div>`;
+                    }
+                } else {
+                    // Use cached data
+                    const cachedData = expertDetailsCache.get(expertId);
+                    details.innerHTML = createExpertDetails(cachedData);
+                }
+            }
+        }
+        
+        function expandAll() {
+            expertsData.forEach(expert => {
+                if (!expandedExperts.has(expert.id)) {
+                    toggleExpert(expert.id);
+                }
+            });
+        }
+        
+        function collapseAll() {
+            // Get current page experts that are expanded
+            const currentPageExpanded = expertsData.filter(expert => expandedExperts.has(expert.id));
+            currentPageExpanded.forEach(expert => {
+                toggleExpert(expert.id);
+            });
+        }
+        
+        function calculateDuration(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 365) {
+                const months = Math.floor(diffDays / 30);
+                return `${months} month${months !== 1 ? 's' : ''}`;
+            } else {
+                const years = Math.floor(diffDays / 365);
+                const remainingMonths = Math.floor((diffDays % 365) / 30);
+                let result = `${years} year${years !== 1 ? 's' : ''}`;
+                if (remainingMonths > 0) {
+                    result += `, ${remainingMonths} month${remainingMonths !== 1 ? 's' : ''}`;
+                }
+                return result;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

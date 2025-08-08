@@ -382,11 +382,17 @@ class ExpertSearchResource(Resource):
                         if attr.id == exp_id:
                             for attribute in attr.attributes:
                                 if attribute.id == attr_id:
+                                    # Get weight and similarity info for this attribute
+                                    attr_info = attr_similarity.get(attr_id, {'similarity': 1.0, 'weight': 1.0})
+                                    
                                     exp_groups[exp_id]['matching_attributes'].append({
                                         'id': attribute.id,
                                         'name': attribute.name,
                                         'type': attribute.type,
-                                        'summary': attribute.summary
+                                        'summary': attribute.summary,
+                                        'similarity_score': round(attr_info['similarity'], 3),
+                                        'type_weight': attr_info['weight'],
+                                        'contribution_score': round(exp_detail['score'], 3)
                                     })
                                     break
                             break
@@ -400,6 +406,32 @@ class ExpertSearchResource(Resource):
                     exp['score'] = round(exp['total_score'], 2)
                     del exp['total_score']
                 
+                # Calculate score breakdown by attribute type
+                score_by_type = {}
+                for exp_detail in experience_details[expert_id]:
+                    attr_id = exp_detail['attribute_id']
+                    attr_info = attr_similarity.get(attr_id, {'similarity': 1.0, 'weight': 1.0})
+                    
+                    # Find the attribute type
+                    attr_type = None
+                    for attr in expert.experiences:
+                        if attr.id == exp_detail['experience_id']:
+                            for attribute in attr.attributes:
+                                if attribute.id == attr_id:
+                                    attr_type = attribute.type
+                                    break
+                            break
+                    
+                    if attr_type:
+                        if attr_type not in score_by_type:
+                            score_by_type[attr_type] = {
+                                'type_weight': attr_info['weight'],
+                                'total_contribution': 0.0,
+                                'match_count': 0
+                            }
+                        score_by_type[attr_type]['total_contribution'] += exp_detail['score']
+                        score_by_type[attr_type]['match_count'] += 1
+
                 expert_result = {
                     'id': expert.id,
                     'name': expert.name,
@@ -407,7 +439,15 @@ class ExpertSearchResource(Resource):
                     'status': expert.status,
                     'meta': expert.meta,
                     'total_score': round(total_score, 2),
-                    'matching_experiences': matching_experiences
+                    'matching_experiences': matching_experiences,
+                    'score_breakdown': {
+                        attr_type: {
+                            'type_weight': data['type_weight'],
+                            'total_contribution': round(data['total_contribution'], 2),
+                            'match_count': data['match_count']
+                        }
+                        for attr_type, data in score_by_type.items()
+                    }
                 }
                 
                 expert_results.append(expert_result)
@@ -430,6 +470,11 @@ class ExpertSearchResource(Resource):
                         'similarity_threshold': effective_config['similarity_threshold'],
                         'recency_decay_factor': effective_config['recency_decay_factor'],
                         'attribute_weights': effective_config.get('attribute_weights', ATTRIBUTE_WEIGHTS)
+                    },
+                    'scoring_formula': 'Score = Duration(years) × Recency × Similarity × TypeWeight',
+                    'attribute_type_weights': {
+                        weight_item['name']: weight_item['weight'] 
+                        for weight_item in effective_config.get('attribute_weights', ATTRIBUTE_WEIGHTS)
                     }
                 }
             }, 200

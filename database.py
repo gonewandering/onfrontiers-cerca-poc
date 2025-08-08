@@ -4,7 +4,10 @@ from sqlalchemy.orm import sessionmaker
 from models import Base
 
 # Get database URL from environment variable or use default
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:cerca123@cerca-aurora-cluster.cluster-cxgooo0scwa0.us-east-1.rds.amazonaws.com:5432/cerca')
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    raise RuntimeError('DATABASE_URL environment variable is not set. Please configure it (see .env.example).')
 
 # Single database engine and session factory for the entire app
 engine = create_engine(DATABASE_URL, echo=True)

@@ -241,7 +241,7 @@ class ExpertListResource(Resource):
     def get(self):
         session = get_db_session()
         try:
-            # Get pagination parameters with error handling
+            # Get pagination and search parameters with error handling
             try:
                 page = max(1, int(request.args.get('page', 1)))
                 page_size = max(1, min(int(request.args.get('page_size', 20)), 100))  # Max 100 per page
@@ -249,15 +249,22 @@ class ExpertListResource(Resource):
                 page = 1
                 page_size = 20
             
+            search_name = request.args.get('search', '').strip()
+            
             # Calculate offset
             offset = (page - 1) * page_size
             
-            # Get total count
-            total_count = session.query(Expert).count()
+            # Build base query with optional name filtering
+            base_query = session.query(Expert)
+            if search_name:
+                # Case-insensitive partial name search
+                base_query = base_query.filter(Expert.name.ilike(f'%{search_name}%'))
+            
+            # Get total count with filters applied
+            total_count = base_query.count()
             
             # Get paginated experts - basic info only, no joins
-            experts_query = session.query(Expert).offset(offset).limit(page_size)
-            experts = experts_query.all()
+            experts = base_query.offset(offset).limit(page_size).all()
             
             # Build response with basic info only
             expert_data = []
@@ -305,6 +312,10 @@ class ExpertListResource(Resource):
                     'total_pages': total_pages,
                     'has_next': page < total_pages,
                     'has_prev': page > 1
+                },
+                'search': {
+                    'query': search_name,
+                    'is_filtered': bool(search_name)
                 }
             }
         finally:

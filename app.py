@@ -247,7 +247,7 @@ def search_ui():
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <div class="header">
             <div class="nav-links">
                 <a href="/ui/search" class="nav-link active">🔍 Search</a>
@@ -262,12 +262,7 @@ def search_ui():
                 <h3>Search Controls</h3>
                 
                 <textarea id="searchInput" class="search-input" rows="6"
-                          placeholder="Enter search query (e.g., 'Python developer at Google')
-
-You can enter multiple lines of text, such as:
-• Job requirements from a posting
-• Resume excerpts or candidate descriptions
-• Detailed technical specifications"></textarea>
+                          placeholder="Enter a search query."></textarea>
                 
                 <div class="weight-controls">
                     <h4>Attribute Weights</h4>

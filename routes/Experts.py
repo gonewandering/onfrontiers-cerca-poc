@@ -25,6 +25,8 @@ class ExpertResource(Resource):
                 'experiences': [
                     {
                         'id': exp.id,
+                        'employer': exp.employer,
+                        'position': exp.position,
                         'start_date': exp.start_date.isoformat(),
                         'end_date': exp.end_date.isoformat(),
                         'summary': exp.summary,
@@ -96,14 +98,14 @@ class ExpertResource(Resource):
                 }, 201
             
             elif 'text/plain' in content_type or content_type == '':
-                # Handle unstructured text input with predefined attribute matching
+                # Handle unstructured text input with two-step extraction
                 text = request.get_data(as_text=True)
                 if not text.strip():
                     return {'message': 'Empty text provided'}, 400
                 
-                # Extract structured data using LLM
+                # Extract structured data using two-step process
                 extractor = LLMExtractor()
-                extracted_data = extractor.extract_expert_data_fast(text)
+                extracted_data = extractor.extract_expert_with_attributes(text)
                 
                 # Create expert
                 expert_data = extracted_data.get('expert', {})
@@ -116,7 +118,7 @@ class ExpertResource(Resource):
                 session.add(expert)
                 session.flush()
                 
-                # Create experiences with predefined attribute matching
+                # Create experiences with attributes from two-step extraction
                 created_experiences = []
                 experiences_data = extracted_data.get('experiences', [])
                 
@@ -129,49 +131,57 @@ class ExpertResource(Resource):
                     else:
                         end_date = datetime.fromisoformat(end_date_str).date()
                     
-                    # Create experience
+                    # Create experience with structured data
+                    employer = exp_data.get('employer', '')
+                    position = exp_data.get('position', '')
+                    # Use 'summary' from the data, or 'activities' for backwards compatibility
+                    summary = exp_data.get('summary', exp_data.get('activities', ''))
+                    
+                    # If summary is not provided, create from structured fields
+                    if not summary and (position or employer):
+                        summary = f"{position} at {employer}"
+                    
                     experience = Experience(
                         expert_id=expert.id,
+                        employer=employer,
+                        position=position,
                         start_date=start_date,
                         end_date=end_date,
-                        summary=exp_data['summary']
+                        summary=summary
                     )
                     session.add(experience)
                     session.flush()
                     
-                    # Process attributes with database-based matching
+                    # Process attribute IDs from LLM analysis
                     matched_attributes = []
-                    for attr_data in exp_data.get('attributes', []):
-                        attr_name = attr_data.get('name', '').strip()
-                        attr_type = attr_data.get('type', '').strip()
+                    attribute_ids = exp_data.get('attribute_ids', [])
+                    
+                    for attr_id in attribute_ids:
+                        # Get attribute from database by ID
+                        attribute = session.query(Attribute).filter(Attribute.id == attr_id).first()
                         
-                        if not attr_name or attr_type not in SEARCHABLE_ATTRIBUTE_TYPES:
-                            continue
-                        
-                        # Find best matching attribute in database
-                        matched_attr, similarity_score = self._find_matching_database_attribute(
-                            session, attr_name, attr_type
-                        )
-                        
-                        if matched_attr:
+                        if attribute:
                             # Associate existing database attribute with this experience
-                            if experience not in matched_attr.experiences:
-                                matched_attr.experiences.append(experience)
+                            if experience not in attribute.experiences:
+                                attribute.experiences.append(experience)
                             
                             matched_attributes.append({
-                                'id': matched_attr.id,
-                                'name': matched_attr.name,
-                                'type': matched_attr.type,
-                                'summary': matched_attr.summary,
-                                'matched_from': attr_name,
-                                'similarity_score': round(similarity_score, 3)
+                                'id': attribute.id,
+                                'name': attribute.name,
+                                'type': attribute.type,
+                                'summary': attribute.summary
                             })
+                        else:
+                            print(f"Warning: Attribute ID {attr_id} not found in database")
                     
                     created_experiences.append({
+                        'employer': exp_data.get('employer', ''),
+                        'position': exp_data.get('position', ''),
                         'start_date': experience.start_date.isoformat(),
                         'end_date': experience.end_date.isoformat(),
                         'summary': experience.summary,
-                        'attributes': matched_attributes
+                        'attributes': matched_attributes,
+                        'analysis_notes': exp_data.get('analysis_notes', '')
                     })
                 
                 session.commit()
@@ -183,7 +193,7 @@ class ExpertResource(Resource):
                     'status': expert.status,
                     'meta': expert.meta,
                     'experiences': created_experiences,
-                    'extraction_source': 'llm_with_database_matching'
+                    'extraction_source': 'two_step_extraction_with_attribute_analysis'
                 }, 201
             
             else:
@@ -250,6 +260,7 @@ class ExpertListResource(Resource):
                 page_size = 20
             
             search_name = request.args.get('search', '').strip()
+            include_experiences = request.args.get('include_experiences', 'false').lower() == 'true'
             
             # Calculate offset
             offset = (page - 1) * page_size
@@ -263,42 +274,68 @@ class ExpertListResource(Resource):
             # Get total count with filters applied
             total_count = base_query.count()
             
-            # Get paginated experts - basic info only, no joins
+            # Get paginated experts
             experts = base_query.offset(offset).limit(page_size).all()
             
-            # Build response with basic info only
+            # Build response
             expert_data = []
             for expert in experts:
-                # Calculate stats efficiently using separate queries
-                total_experiences = session.query(Experience).filter(Experience.expert_id == expert.id).count()
-                total_attributes = session.execute(text("""
-                    SELECT COUNT(a.id) 
-                    FROM attribute a 
-                    JOIN experience_attribute ea ON a.id = ea.attribute_id 
-                    JOIN experience e ON ea.experience_id = e.id 
-                    WHERE e.expert_id = :expert_id
-                """), {'expert_id': expert.id}).scalar() or 0
-                
-                unique_types = session.execute(text("""
-                    SELECT COUNT(DISTINCT a.type) 
-                    FROM attribute a 
-                    JOIN experience_attribute ea ON a.id = ea.attribute_id 
-                    JOIN experience e ON ea.experience_id = e.id 
-                    WHERE e.expert_id = :expert_id
-                """), {'expert_id': expert.id}).scalar() or 0
-                
-                expert_data.append({
+                expert_info = {
                     'id': expert.id,
                     'name': expert.name,
                     'summary': expert.summary,
                     'status': expert.status,
-                    'meta': expert.meta,
-                    'stats': {
+                    'meta': expert.meta
+                }
+                
+                if include_experiences:
+                    # Include full experience data with attributes
+                    expert_info['experiences'] = [
+                        {
+                            'id': exp.id,
+                            'employer': exp.employer,
+                            'position': exp.position,
+                            'start_date': exp.start_date.isoformat(),
+                            'end_date': exp.end_date.isoformat(),
+                            'summary': exp.summary,
+                            'attributes': [
+                                {
+                                    'id': attr.id,
+                                    'name': attr.name,
+                                    'type': attr.type,
+                                    'summary': attr.summary,
+                                    'depth': attr.depth,
+                                    'parent_id': attr.parent_id
+                                } for attr in exp.attributes
+                            ]
+                        } for exp in expert.experiences
+                    ]
+                else:
+                    # Calculate stats efficiently using separate queries
+                    total_experiences = session.query(Experience).filter(Experience.expert_id == expert.id).count()
+                    total_attributes = session.execute(text("""
+                        SELECT COUNT(a.id) 
+                        FROM attribute a 
+                        JOIN experience_attribute ea ON a.id = ea.attribute_id 
+                        JOIN experience e ON ea.experience_id = e.id 
+                        WHERE e.expert_id = :expert_id
+                    """), {'expert_id': expert.id}).scalar() or 0
+                    
+                    unique_types = session.execute(text("""
+                        SELECT COUNT(DISTINCT a.type) 
+                        FROM attribute a 
+                        JOIN experience_attribute ea ON a.id = ea.attribute_id 
+                        JOIN experience e ON ea.experience_id = e.id 
+                        WHERE e.expert_id = :expert_id
+                    """), {'expert_id': expert.id}).scalar() or 0
+                    
+                    expert_info['stats'] = {
                         'total_experiences': total_experiences,
                         'total_attributes': total_attributes,
                         'unique_attribute_types': unique_types
                     }
-                })
+                
+                expert_data.append(expert_info)
             
             # Calculate pagination info
             total_pages = (total_count + page_size - 1) // page_size
@@ -316,7 +353,8 @@ class ExpertListResource(Resource):
                 'search': {
                     'query': search_name,
                     'is_filtered': bool(search_name)
-                }
+                },
+                'include_experiences': include_experiences
             }
         finally:
             session.close()

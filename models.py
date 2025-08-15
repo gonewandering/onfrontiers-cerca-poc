@@ -1,6 +1,6 @@
 from typing import List, Optional
-from datetime import date
-from sqlalchemy import ForeignKey, String, Date, Text, Boolean, Enum, Index, JSON, event, Table, Column, Integer
+from datetime import date, datetime
+from sqlalchemy import ForeignKey, String, Date, Text, Boolean, Enum, Index, JSON, event, Table, Column, Integer, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
 
@@ -46,6 +46,10 @@ class Experience(Base):
     expert_id: Mapped[int] = mapped_column(ForeignKey("expert.id"), nullable=False)
     expert: Mapped["Expert"] = relationship(back_populates="experiences")
 
+    # Structured fields
+    employer: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    position: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
 
@@ -87,6 +91,68 @@ class Attribute(Base):
 
     def __repr__(self) -> str:
         return f"Attribute(id={self.id!r}, name={self.name!r}, type={self.type!r})"
+
+
+class Prompt(Base):
+    __tablename__ = "prompt"
+    __table_args__ = (
+        Index('ix_prompt_template_name_version', 'template_name', 'version_number'),
+        Index('ix_prompt_template_active', 'template_name', 'is_active_version'),
+    )
+    
+    class PromptType:
+        EXPERT_EXTRACTION = 'expert_extraction'
+        EXPERT_SEARCH = 'expert_search'
+        ATTRIBUTE_SEARCH = 'attribute_search'
+        CUSTOM = 'custom'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    template_name: Mapped[str] = mapped_column(String(128))  # The template identifier (e.g., "expert_extraction")
+    version_number: Mapped[int] = mapped_column(Integer, default=1)  # Version number (1, 2, 3, etc.)
+    prompt_type: Mapped[str] = mapped_column(String(64))
+    
+    # Prompt content
+    system_prompt: Mapped[str] = mapped_column(Text())
+    user_prompt_template: Mapped[str] = mapped_column(Text())
+    response_schema: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    
+    # Metadata
+    description: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    model: Mapped[str] = mapped_column(String(64), default="gpt-4o-mini")
+    temperature: Mapped[float] = mapped_column(default=0.1)
+    enable_attribute_search: Mapped[bool] = mapped_column(Boolean(), default=False)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Optional: user who created/modified
+    created_by: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    
+    # Version status
+    is_active_version: Mapped[bool] = mapped_column(Boolean(), default=False)  # Only one version per template can be active
+    is_default: Mapped[bool] = mapped_column(Boolean(), default=False)  # System default templates
+    
+    # Version notes
+    version_notes: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    
+    @property 
+    def name(self) -> str:
+        """Legacy property for backward compatibility"""
+        return self.template_name
+        
+    @property
+    def version(self) -> str:
+        """Legacy property for backward compatibility"""
+        return str(self.version_number)
+        
+    @property 
+    def is_active(self) -> bool:
+        """Legacy property for backward compatibility"""
+        return self.is_active_version
+    
+    def __repr__(self) -> str:
+        return f"Prompt(id={self.id!r}, template_name={self.template_name!r}, version={self.version_number!r}, type={self.prompt_type!r})"
 
 # Event listeners for automatic embedding generation
 @event.listens_for(Attribute, 'before_insert')

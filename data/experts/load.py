@@ -32,7 +32,7 @@ from database import get_db_session
 from sqlalchemy.exc import IntegrityError
 
 class ExpertLoader:
-    def __init__(self, batch_size=10, dry_run=False):
+    def __init__(self, batch_size=5, dry_run=False):
         self.batch_size = batch_size
         self.dry_run = dry_run
         self.session = None if dry_run else get_db_session()
@@ -87,11 +87,11 @@ class ExpertLoader:
                     self.stats['skipped'] += 1
                     return False
             
-            # Extract expert data using fast LLM method
+            # Extract expert data using optimized batch method
             self.log(f"Processing {profile_id}: Extracting from {len(profile_text)} chars of text")
             
             extraction_start = time.time()
-            extracted_data = self.extractor.extract_expert_data_fast(profile_text)
+            extracted_data = self.extractor.extract_expert_with_attributes_fast(profile_text)
             extraction_time = time.time() - extraction_start
             
             expert_data = extracted_data.get('expert', {})
@@ -147,6 +147,8 @@ class ExpertLoader:
                     
                     experience = Experience(
                         expert_id=expert.id,
+                        employer=exp_data.get('employer'),
+                        position=exp_data.get('position'),
                         start_date=start_date,
                         end_date=end_date,
                         summary=exp_data.get('summary', '')
@@ -155,47 +157,23 @@ class ExpertLoader:
                     self.session.add(experience)
                     self.session.flush()
                     
-                    # Create/associate attributes (same logic as expert creation endpoint)
-                    for attr_data in exp_data.get('attributes', []):
-                        attr_name = attr_data.get('name', '').strip()
-                        attr_type = attr_data.get('type', '').strip()
-                        attr_summary = attr_data.get('summary', '')
+                    # Associate only existing attributes using IDs from two-step extraction
+                    matched_attributes = 0
+                    attribute_ids = exp_data.get('attribute_ids', [])
+                    
+                    for attr_id in attribute_ids:
+                        # Get attribute from database by ID
+                        attribute = self.session.query(Attribute).filter(Attribute.id == attr_id).first()
                         
-                        if not attr_name or not attr_type:
-                            continue
-                            
-                        # Check if attribute already exists (exact name and type match)
-                        existing_attr = self.session.query(Attribute).filter(
-                            Attribute.name.ilike(attr_name),
-                            Attribute.type == attr_type
-                        ).first()
-                        
-                        if existing_attr:
-                            # Associate existing attribute with this experience
-                            existing_attr.experiences.append(experience)
+                        if attribute:
+                            # Associate existing database attribute with this experience
+                            if experience not in attribute.experiences:
+                                attribute.experiences.append(experience)
+                            matched_attributes += 1
                         else:
-                            # Create new attribute with embedding
-                            try:
-                                from lib.embedding_service import embedding_service
-                                embedding = embedding_service.generate_attribute_embedding(
-                                    attr_name, attr_type, attr_summary or f"{attr_type.title()}: {attr_name}"
-                                )
-                            except Exception as e:
-                                print(f"WARNING - Failed to generate embedding for {attr_name}: {str(e)}")
-                                embedding = None
-                            
-                            # Create new attribute
-                            new_attr = Attribute(
-                                name=attr_name,
-                                type=attr_type,  
-                                summary=attr_summary or f"{attr_type.title()}: {attr_name}",
-                                embedding=embedding
-                            )
-                            self.session.add(new_attr)
-                            self.session.flush()  # Get the ID
-                            
-                            # Associate new attribute with this experience
-                            new_attr.experiences.append(experience)
+                            self.log(f"Warning: Attribute ID {attr_id} not found in database for {profile_id}", 'WARN')
+                    
+                    self.log(f"  Matched {matched_attributes} existing attributes for experience: {exp_data.get('position', 'Unknown')} at {exp_data.get('employer', 'Unknown')}")
                     
                     created_experiences += 1
                     
@@ -203,6 +181,7 @@ class ExpertLoader:
                     self.log(f"Warning: Failed to create experience for {profile_id}: {str(exp_error)}", 'WARN')
                     continue
             
+            # Commit less frequently for better performance
             self.session.commit()
             
             self.log(f"Success {profile_id}: Created expert '{expert_data.get('name')}' (ID: {expert.id}) with {created_experiences} experiences in {extraction_time:.2f}s")
@@ -284,7 +263,7 @@ def main():
     parser = argparse.ArgumentParser(description='Load experts from JSON file')
     parser.add_argument('--limit', type=int, help='Limit number of records to process')
     parser.add_argument('--start', type=int, default=0, help='Start from record number (0-based)')
-    parser.add_argument('--batch-size', type=int, default=10, help='Batch size for processing')
+    parser.add_argument('--batch-size', type=int, default=5, help='Batch size for processing')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be processed without saving')
     parser.add_argument('--json-file', default='data/experts/experts.json', help='Path to JSON file')
     

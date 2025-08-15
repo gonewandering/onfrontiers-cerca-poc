@@ -100,8 +100,8 @@ class ExpertSearchResource(Resource):
                         if attr_name in SEARCHABLE_ATTRIBUTE_TYPES:
                             try:
                                 weight_value = float(weight_item['weight'])
-                                # Clamp weight to reasonable range
-                                weight_value = max(0.1, min(10.0, weight_value))
+                                # Clamp weight to reasonable range (now allowing 0 for geometric weights)
+                                weight_value = max(0.0, min(10.0, weight_value))
                                 weight_dict[attr_name] = weight_value
                             except (ValueError, TypeError):
                                 continue  # Skip invalid weights
@@ -111,6 +111,7 @@ class ExpertSearchResource(Resource):
             
             # Apply setting overrides
             effective_config = merge_config(SEARCH_CONFIG, search_settings)
+            print(f"DEBUG - Effective weights being used: {effective_config.get('attribute_weights', ATTRIBUTE_WEIGHTS)}")
             
             # Create a helper function to get attribute weights
             def get_attribute_weight(attr_type):
@@ -158,6 +159,28 @@ class ExpertSearchResource(Resource):
                             if term.strip():
                                 all_terms.append(term.strip())
                                 term_to_type[term.strip()] = attr_type
+                    
+                    # Always ensure extracted_attributes has an entry for each type that was extracted
+                    if attr_key in llm_extracted and llm_extracted[attr_key] and attr_type not in extracted_attributes:
+                        extracted_attributes[attr_type] = []
+                
+                # Even if no terms are extracted, show what the LLM extracted
+                if not all_terms:
+                    # Add all extracted terms as no_match entries
+                    for attr_type in SEARCHABLE_ATTRIBUTE_TYPES:
+                        attr_key = f"{attr_type}_terms"
+                        if attr_key in llm_extracted and llm_extracted[attr_key]:
+                            if attr_type not in extracted_attributes:
+                                extracted_attributes[attr_type] = []
+                            for term in llm_extracted[attr_key]:
+                                if term.strip():
+                                    extracted_attributes[attr_type].append({
+                                        'id': None,
+                                        'name': term,
+                                        'type': attr_type,
+                                        'relevance_score': 0.0,
+                                        'source': 'no_match'
+                                    })
                 
                 # Batch generate embeddings for all terms at once
                 if all_terms:
@@ -172,21 +195,19 @@ class ExpertSearchResource(Resource):
                             # Convert embedding to pgvector format
                             embedding_str = '[' + ','.join(map(str, term_embedding)) + ']'
                             
-                            # Single optimized query that returns all needed data
+                            # Single optimized query that returns all needed data (no similarity threshold)
                             similarity_query = text(f"""
                                 SELECT id, name, type, summary, 
                                        (1 - (embedding <=> '{embedding_str}'::vector)) AS similarity
                                 FROM attribute 
                                 WHERE type = :attr_type 
                                   AND embedding IS NOT NULL
-                                  AND (1 - (embedding <=> '{embedding_str}'::vector)) >= :similarity_threshold
                                 ORDER BY embedding <=> '{embedding_str}'::vector
                                 LIMIT 1
                             """)
                             
                             result = session.execute(similarity_query, {
-                                'attr_type': attr_type,
-                                'similarity_threshold': similarity_threshold
+                                'attr_type': attr_type
                             }).fetchone()
                             
                             if result:
@@ -235,13 +256,15 @@ class ExpertSearchResource(Resource):
             
             # STEP 3: Score each experience that has matching attributes
             if not all_attribute_ids:
+                # No matching attributes found, but still return extracted data
                 return {
                     'experts': [],
                     'search_metadata': {
                         'extracted_attributes': extracted_attributes,
+                        'search_summary': f'Extracted {sum(len(v) for v in extracted_attributes.values())} attributes but no database matches found',
                         'total_experts': 0,
                         'search_time_ms': round((time.time() - start_time) * 1000, 2),
-                        'message': 'No matching attributes found'
+                        'message': 'No matching attributes found in database'
                     }
                 }, 200
             
@@ -254,9 +277,11 @@ class ExpertSearchResource(Resource):
             attr_similarity = {}
             for attr_type, attrs in search_attributes.items():
                 for attr in attrs:
+                    weight = get_attribute_weight(attr_type)
+                    print(f"DEBUG - Attribute {attr['id']} ({attr_type}): weight={weight}, similarity={attr['similarity']}")
                     attr_similarity[attr['id']] = {
                         'similarity': attr['similarity'],
-                        'weight': get_attribute_weight(attr_type)
+                        'weight': weight
                     }
             
             # Simple scoring query: years * recency * similarity * weight for each experience
@@ -267,6 +292,8 @@ class ExpertSearchResource(Resource):
                     e.start_date,
                     e.end_date,
                     e.summary,
+                    e.position,
+                    e.employer,
                     (e.end_date - e.start_date) / 365.0 as duration_years,
                     GREATEST(0.1, 1 - :recency_factor * (CURRENT_DATE - e.end_date) / 365.0) as recency_multiplier,
                     ea.attribute_id
@@ -293,13 +320,22 @@ class ExpertSearchResource(Resource):
                 # Get similarity and weight for this attribute
                 attr_info = attr_similarity.get(attr_id, {'similarity': 1.0, 'weight': 1.0})
                 
-                # Calculate experience score: years * recency * similarity * weight
-                exp_score = (
+                # Calculate experience score using geometric weights: (years * recency * similarity) ** weight
+                # This ensures weight=0 makes the contribution neutral (score^0 = 1), effectively eliminating the attribute
+                base_score = (
                     float(row.duration_years) * 
                     float(row.recency_multiplier) * 
-                    attr_info['similarity'] * 
-                    attr_info['weight']
+                    attr_info['similarity']
                 )
+                
+                weight = attr_info['weight']
+                if weight == 0:
+                    # Weight of 0 means no contribution from this attribute
+                    exp_score = 0.0
+                else:
+                    # Geometric weight application: base_score raised to the power of (weight/2)
+                    # Using weight/2 to prevent extreme values while maintaining zero-effect property
+                    exp_score = base_score ** (weight / 2.0)
                 
                 # Accumulate expert score
                 if expert_id not in expert_scores:
@@ -317,6 +353,8 @@ class ExpertSearchResource(Resource):
                         'start_date': row.start_date,
                         'end_date': row.end_date,
                         'summary': row.summary,
+                        'position': row.position,
+                        'employer': row.employer,
                         'attribute_id': attr_id,
                         'score': exp_score
                     })
@@ -368,6 +406,8 @@ class ExpertSearchResource(Resource):
                         exp_groups[exp_id] = {
                             'id': exp_id,
                             'summary': exp_detail['summary'],
+                            'position': exp_detail['position'],
+                            'employer': exp_detail['employer'],
                             'start_date': exp_detail['start_date'].isoformat(),
                             'end_date': exp_detail['end_date'].isoformat(),
                             'total_score': 0.0,
@@ -471,7 +511,7 @@ class ExpertSearchResource(Resource):
                         'recency_decay_factor': effective_config['recency_decay_factor'],
                         'attribute_weights': effective_config.get('attribute_weights', ATTRIBUTE_WEIGHTS)
                     },
-                    'scoring_formula': 'Score = Duration(years) × Recency × Similarity × TypeWeight',
+                    'scoring_formula': 'Score = (Duration(years) × Recency × Similarity) ^ (TypeWeight/2), 0 weight = 0 contribution',
                     'attribute_type_weights': {
                         weight_item['name']: weight_item['weight'] 
                         for weight_item in effective_config.get('attribute_weights', ATTRIBUTE_WEIGHTS)

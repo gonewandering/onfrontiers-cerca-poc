@@ -3,433 +3,792 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expert Search - Weight Testing</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>Expert Search - Cerca</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            margin: 0; padding: 20px; background-color: #f5f5f5;
         }
-        
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
+            max-width: 1200px; margin: 0 auto; background: white;
+            border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
+        /* Header component styles */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
+            color: white; padding: 20px; text-align: center; position: relative;
         }
         
-        .content {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 20px;
+        .nav-links {
+            position: absolute; top: 20px; left: 20px; display: flex; gap: 15px;
         }
         
-        .controls {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9); text-decoration: none; padding: 8px 16px;
+            border-radius: 20px; background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px); transition: all 0.3s ease;
+            font-size: 14px; font-weight: 500;
         }
         
-        .results {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2); color: white; transform: translateY(-1px);
         }
         
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.3); color: white;
+        }
+        
+        .content { padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        .controls { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .results { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
         .search-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 6px;
-            font-size: 16px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
+            width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px;
+            font-size: 16px; margin-bottom: 20px; resize: vertical; min-height: 120px;
+            font-family: inherit; line-height: 1.4;
         }
-        
-        .search-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .weight-controls {
-            margin-bottom: 20px;
-        }
-        
+        .search-input:focus { outline: none; border-color: #667eea; }
+        .weight-controls { margin-bottom: 20px; }
         .weight-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-            padding: 8px;
-            background: white;
-            border-radius: 6px;
-            border: 1px solid #dee2e6;
+            display: flex; align-items: center; margin-bottom: 12px; padding: 8px;
+            background: white; border-radius: 6px; border: 1px solid #dee2e6;
         }
-        
-        .weight-label {
-            flex: 1;
-            font-weight: 500;
-            text-transform: capitalize;
-        }
-        
-        .weight-slider {
-            flex: 2;
-            margin: 0 10px;
-        }
-        
-        .weight-value {
-            width: 50px;
-            text-align: center;
-            font-weight: bold;
-            color: #667eea;
-        }
-        
+        .weight-label { flex: 1; font-weight: 500; text-transform: capitalize; }
+        .weight-slider { flex: 2; margin: 0 10px; }
+        .weight-value { width: 50px; text-align: center; font-weight: bold; color: #667eea; }
         .search-button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: transform 0.2s;
+            width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500;
+            cursor: pointer; transition: transform 0.2s;
         }
-        
-        .search-button:hover {
-            transform: translateY(-1px);
-        }
-        
-        .search-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
+        .search-button:hover { transform: translateY(-1px); }
+        .search-button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .expert-card {
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            background: #f8f9fa;
+            border: 1px solid #e9ecef; border-radius: 8px; padding: 16px;
+            margin-bottom: 16px; background: #f8f9fa;
         }
-        
-        .expert-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        .expert-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #343a40;
-            flex: 1;
-        }
-        
+        .expert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .expert-name { font-size: 18px; font-weight: 600; color: #343a40; }
         .expert-score {
-            background: #667eea;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
+            background: #667eea; color: white; padding: 4px 8px;
+            border-radius: 12px; font-size: 14px; font-weight: 500;
         }
-        
-        .expert-summary {
-            color: #6c757d;
-            margin-bottom: 12px;
-            line-height: 1.4;
+        .profile-id {
+            font-size: 12px; color: #6c757d; font-weight: normal;
+            margin-left: 8px; font-style: italic;
         }
-        
-        .experiences {
-            margin-top: 12px;
-        }
-        
+        .expert-summary { color: #6c757d; margin-bottom: 12px; line-height: 1.4; }
+        .experiences { margin-top: 12px; }
         .experience {
-            background: white;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 4px solid #667eea;
+            background: white; padding: 12px; border-radius: 6px;
+            margin-bottom: 8px; border-left: 4px solid #667eea;
         }
-        
-        .experience-summary {
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-        
-        .experience-dates {
-            font-size: 12px;
-            color: #6c757d;
-            margin-bottom: 8px;
-        }
-        
-        .attributes {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        
+        .experience-summary { font-weight: 500; margin-bottom: 4px; }
+        .experience-dates { font-size: 12px; color: #6c757d; margin-bottom: 8px; }
+        .attributes { display: flex; flex-wrap: wrap; gap: 6px; }
         .attribute {
-            background: #e9ecef;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            color: #495057;
+            background: #e9ecef; padding: 2px 6px; border-radius: 4px;
+            font-size: 11px; color: #495057;
         }
-        
         .attribute.agency { background: #e3f2fd; color: #1565c0; }
         .attribute.role { background: #f3e5f5; color: #7b1fa2; }
         .attribute.skill { background: #e8f5e8; color: #2e7d32; }
         .attribute.seniority { background: #fff3e0; color: #ef6c00; }
         .attribute.program { background: #fce4ec; color: #c2185b; }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #6c757d;
-        }
-        
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-        }
-        
+        .loading { text-align: center; padding: 40px; color: #6c757d; }
+        .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; margin-bottom: 16px; }
         .search-meta {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            color: #6c757d;
+            background: #f8f9fa; padding: 12px; border-radius: 6px;
+            margin-bottom: 16px; font-size: 14px; color: #6c757d;
         }
         
+        .extracted-attributes {
+            background: #e3f2fd; border: 1px solid #90caf9; border-radius: 6px;
+            padding: 12px; margin-bottom: 16px; font-size: 13px;
+        }
+        
+        .extracted-attributes h5 {
+            margin: 0 0 8px 0; color: #1565c0; font-size: 14px;
+        }
+        
+        .attribute-group {
+            margin-bottom: 8px;
+        }
+        
+        .attribute-type {
+            font-weight: bold; text-transform: capitalize; color: #1976d2;
+            margin-right: 8px;
+        }
+        
+        .attribute-list {
+            display: inline-flex; flex-wrap: wrap; gap: 4px;
+        }
+        
+        .extracted-attribute {
+            background: #bbdefb; color: #0d47a1; padding: 2px 6px;
+            border-radius: 4px; font-size: 11px; font-weight: 500;
+        }
+        
+        .extracted-attribute.matched {
+            background: #c8e6c9; color: #2e7d32; border: 1px solid #4caf50;
+        }
+        
+        .extracted-attribute.no-match {
+            background: #ffebee; color: #d32f2f; border: 1px solid #f44336;
+        }
+        
+        .experience-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .experience-title {
+            flex: 1;
+        }
+        
+        .experience-position {
+            font-weight: 600; font-size: 16px; color: #343a40; margin-bottom: 2px;
+        }
+        
+        .experience-employer {
+            font-size: 14px; color: #6c757d; font-style: italic;
+        }
+        
+        .experience-score {
+            background: #667eea; color: white; padding: 4px 8px;
+            border-radius: 12px; font-size: 12px; font-weight: 500;
+            white-space: nowrap; margin-left: 10px;
+        }
+        
+        .experience-description {
+            margin: 8px 0 12px 0; color: #495057; font-size: 14px; 
+            line-height: 1.4; background: #f8f9fa; padding: 8px;
+            border-radius: 4px; border-left: 3px solid #dee2e6;
+        }
         .reset-button {
-            width: 100%;
-            padding: 8px;
-            background: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
+            width: 100%; padding: 8px; background: #6c757d; color: white;
+            border: none; border-radius: 6px; font-size: 14px; cursor: pointer; margin-top: 10px;
+        }
+        
+        .advanced-controls {
+            margin-top: 20px;
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+        }
+        
+        .collapsible-header {
+            display: flex;
+            align-items: center;
             cursor: pointer;
+            padding: 8px 0;
+            user-select: none;
+        }
+        
+        .collapsible-header:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 4px;
+            padding: 8px;
+        }
+        
+        .toggle-icon {
+            margin-right: 8px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .toggle-icon.expanded {
+            transform: rotate(90deg);
+        }
+        
+        .collapsible-content {
+            display: none;
             margin-top: 10px;
         }
+        
+        .collapsible-content.expanded {
+            display: block;
+        }
+        
+        .setting-description {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: 8px;
+            font-style: italic;
+        }
+        
+        /* Score breakdown bar styles */
+        .score-breakdown {
+            margin: 12px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        
+        .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #e9ecef;
+            font-size: 12px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .total-years {
+            color: #667eea;
+        }
+        
+        .breakdown-bar {
+            display: flex;
+            height: 20px;
+            width: 100%;
+        }
+        
+        .breakdown-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            position: relative;
+            min-width: 20px;
+        }
+        
+        .breakdown-segment.agency {
+            background: linear-gradient(45deg, #1976d2, #1565c0);
+        }
+        
+        .breakdown-segment.role {
+            background: linear-gradient(45deg, #7b1fa2, #6a1b9a);
+        }
+        
+        .breakdown-segment.skill {
+            background: linear-gradient(45deg, #2e7d32, #1b5e20);
+        }
+        
+        .breakdown-segment.seniority {
+            background: linear-gradient(45deg, #ef6c00, #e65100);
+        }
+        
+        .breakdown-segment.program {
+            background: linear-gradient(45deg, #c2185b, #ad1457);
+        }
+        
+        .breakdown-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            font-size: 11px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .legend-color.agency { background: #1976d2; }
+        .legend-color.role { background: #7b1fa2; }
+        .legend-color.skill { background: #2e7d32; }
+        .legend-color.seniority { background: #ef6c00; }
+        .legend-color.program { background: #c2185b; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-
-        const DEFAULT_WEIGHTS = {
-            agency: 1.5,
-            role: 2.0,
-            seniority: 1.0,
-            skill: 1.8,
-            program: 1.2
-        };
-
-        function ExpertSearch() {
-            const [searchText, setSearchText] = useState('');
-            const [weights, setWeights] = useState(DEFAULT_WEIGHTS);
-            const [results, setResults] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState(null);
-
-            const handleWeightChange = (attributeType, value) => {
-                setWeights(prev => ({
-                    ...prev,
-                    [attributeType]: parseFloat(value)
-                }));
-            };
-
-            const resetWeights = () => {
-                setWeights(DEFAULT_WEIGHTS);
-            };
-
-            const handleSearch = async () => {
-                if (!searchText.trim()) return;
+    <div class="container-fluid">
+        <div id="header-container">
+            <!-- Header will be rendered here by the component -->
+        </div>
+        
+        <div class="content">
+            <div class="controls">
+                <h3>Search Controls</h3>
                 
-                setLoading(true);
-                setError(null);
+                <textarea id="searchInput" class="search-input" rows="6"
+                          placeholder="Enter a search query."></textarea>
                 
-                try {
-                    const attributeWeights = Object.entries(weights).map(([name, weight]) => ({
-                        name,
-                        weight
-                    }));
-
-                    const response = await fetch('/api/experts/search', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            text: searchText,
-                            page_size: 10,
-                            settings: {
-                                attribute_weights: attributeWeights
-                            }
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Search failed: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    setResults(data);
-                } catch (err) {
-                    setError(err.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            const handleKeyPress = (e) => {
-                if (e.key === 'Enter') {
-                    handleSearch();
-                }
-            };
-
-            return (
-                <div className="container">
-                    <div className="header">
-                        <h1>Expert Search - Weight Testing</h1>
-                        <p>Customize attribute weights to see how they affect search results</p>
+                <div class="weight-controls">
+                    <h4>Attribute Weights</h4>
+                    <div class="weight-item">
+                        <div class="weight-label">agency</div>
+                        <input type="range" class="weight-slider" min="0.0" max="5.0" step="0.1" value="1.5" data-type="agency" />
+                        <div class="weight-value" id="agency-value">1.5</div>
+                    </div>
+                    <div class="weight-item">
+                        <div class="weight-label">role</div>
+                        <input type="range" class="weight-slider" min="0.0" max="5.0" step="0.1" value="2.0" data-type="role" />
+                        <div class="weight-value" id="role-value">2.0</div>
+                    </div>
+                    <div class="weight-item">
+                        <div class="weight-label">seniority</div>
+                        <input type="range" class="weight-slider" min="0.0" max="5.0" step="0.1" value="1.0" data-type="seniority" />
+                        <div class="weight-value" id="seniority-value">1.0</div>
+                    </div>
+                    <div class="weight-item">
+                        <div class="weight-label">skill</div>
+                        <input type="range" class="weight-slider" min="0.0" max="5.0" step="0.1" value="1.8" data-type="skill" />
+                        <div class="weight-value" id="skill-value">1.8</div>
+                    </div>
+                    <div class="weight-item">
+                        <div class="weight-label">program</div>
+                        <input type="range" class="weight-slider" min="0.0" max="5.0" step="0.1" value="1.2" data-type="program" />
+                        <div class="weight-value" id="program-value">1.2</div>
+                    </div>
+                </div>
+                
+                <div class="advanced-controls">
+                    <div class="collapsible-header" onclick="toggleAdvancedSettings()">
+                        <span class="toggle-icon" id="advanced-toggle">▶</span>
+                        <h4 style="margin: 0;">Advanced Settings</h4>
                     </div>
                     
-                    <div className="content">
-                        <div className="controls">
-                            <h3>Search Controls</h3>
-                            
-                            <input
-                                type="text"
-                                className="search-input"
-                                placeholder="Search"
-                                value={searchText}
-                                onChange={(e) => setSearchText(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                            />
-                            
-                            <div className="weight-controls">
-                                <h4>Attribute Weights</h4>
-                                {Object.entries(weights).map(([type, weight]) => (
-                                    <div key={type} className="weight-item">
-                                        <div className="weight-label">{type}</div>
-                                        <input
-                                            type="range"
-                                            className="weight-slider"
-                                            min="0.1"
-                                            max="5.0"
-                                            step="0.1"
-                                            value={weight}
-                                            onChange={(e) => handleWeightChange(type, e.target.value)}
-                                        />
-                                        <div className="weight-value">{weight}</div>
-                                    </div>
-                                ))}
-                                <button className="reset-button" onClick={resetWeights}>
-                                    Reset to Defaults
-                                </button>
+                    <div class="collapsible-content" id="advanced-content">
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                Similarity Threshold
+                                <div class="setting-description">Min cosine similarity to consider a match (higher = stricter)</div>
                             </div>
-                            
-                            <button 
-                                className="search-button" 
-                                onClick={handleSearch}
-                                disabled={loading || !searchText.trim()}
-                            >
-                                {loading ? 'Searching...' : 'Search Experts'}
-                            </button>
+                            <input type="range" class="weight-slider" min="0.1" max="1.0" step="0.05" value="0.4" id="similarity-threshold" />
+                            <div class="weight-value" id="similarity-threshold-value">0.4</div>
                         </div>
-                        
-                        <div className="results">
-                            <h3>Search Results</h3>
-                            
-                            {error && (
-                                <div className="error">
-                                    Error: {error}
-                                </div>
-                            )}
-                            
-                            {loading && (
-                                <div className="loading">
-                                    Searching for experts...
-                                </div>
-                            )}
-                            
-                            {results && !loading && (
-                                <>
-                                    <div className="search-meta">
-                                        Found {results.search_metadata.total_experts} experts in {results.search_metadata.search_time_ms}ms
-                                    </div>
-                                    
-                                    {results.experts.length === 0 ? (
-                                        <div className="loading">No experts found for your search query.</div>
-                                    ) : (
-                                        results.experts.map(expert => (
-                                            <div key={expert.id} className="expert-card">
-                                                <div className="expert-header">
-                                                    <div className="expert-name">{expert.name}</div>
-                                                    <div className="expert-score">{expert.total_score}</div>
-                                                </div>
-                                                <div className="expert-summary">{expert.summary}</div>
-                                                
-                                                <div className="experiences">
-                                                    {expert.matching_experiences.map(exp => (
-                                                        <div key={exp.id} className="experience">
-                                                            <div className="experience-summary">{exp.summary}</div>
-                                                            <div className="experience-dates">
-                                                                {exp.start_date} to {exp.end_date} (Score: {exp.score})
-                                                            </div>
-                                                            <div className="attributes">
-                                                                {exp.matching_attributes.map(attr => (
-                                                                    <span 
-                                                                        key={attr.id} 
-                                                                        className={`attribute ${attr.type}`}
-                                                                    >
-                                                                        {attr.name}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </>
-                            )}
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                Max Similar Attributes
+                                <div class="setting-description">Max attributes to consider per search</div>
+                            </div>
+                            <input type="range" class="weight-slider" min="5" max="50" step="1" value="20" id="max-similar-attributes" />
+                            <div class="weight-value" id="max-similar-attributes-value">20</div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                Max Attributes Per Type
+                                <div class="setting-description">Max attributes of each type to use</div>
+                            </div>
+                            <input type="range" class="weight-slider" min="1" max="10" step="1" value="3" id="max-attributes-per-type" />
+                            <div class="weight-value" id="max-attributes-per-type-value">3</div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                Scoring Base
+                                <div class="setting-description">Exponential base for score calculation</div>
+                            </div>
+                            <input type="range" class="weight-slider" min="1.0" max="2.0" step="0.05" value="1.1" id="scoring-base" />
+                            <div class="weight-value" id="scoring-base-value">1.1</div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                Recency Decay Factor
+                                <div class="setting-description">How much older experience reduces score</div>
+                            </div>
+                            <input type="range" class="weight-slider" min="0.0" max="0.5" step="0.01" value="0.1" id="recency-decay-factor" />
+                            <div class="weight-value" id="recency-decay-factor-value">0.1</div>
                         </div>
                     </div>
                 </div>
-            );
-        }
+                
+                <button class="reset-button" onclick="resetAllSettings()">Reset All to Defaults</button>
+                
+                <button class="search-button" onclick="performSearch()">Search Experts</button>
+            </div>
+            
+            <div class="results">
+                <h3>Search Results</h3>
+                <div id="results-content">
+                    <div class="loading">Enter a search query and click "Search Experts" to see results</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        ReactDOM.render(<ExpertSearch />, document.getElementById('root'));
+    <script src="/static/components/header.js"></script>
+    <script>
+        // Initialize header
+        document.addEventListener('DOMContentLoaded', function() {
+            // Render the header
+            const header = new CercaHeader(
+                'Expert Search', 
+                'Customize attribute weights to see how they affect search results',
+                'search'
+            );
+            document.getElementById('header-container').innerHTML = header.render();
+        });
+
+        const defaultWeights = { agency: 1.5, role: 2.0, seniority: 1.0, skill: 1.8, program: 1.2 };
+        const defaultSettings = {
+            'similarity-threshold': 0.4,
+            'max-similar-attributes': 20,
+            'max-attributes-per-type': 3,
+            'scoring-base': 1.1,
+            'recency-decay-factor': 0.1
+        };
+        
+        // Simple escapeHtml utility
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Update value displays for all sliders
+        document.querySelectorAll('.weight-slider').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const type = this.getAttribute('data-type');
+                if (type) {
+                    // Weight slider
+                    document.getElementById(type + '-value').textContent = this.value;
+                } else {
+                    // Advanced setting slider
+                    const id = this.getAttribute('id');
+                    document.getElementById(id + '-value').textContent = this.value;
+                }
+            });
+        });
+        
+        // Update value displays for advanced settings
+        document.querySelectorAll('#similarity-threshold, #max-similar-attributes, #max-attributes-per-type, #scoring-base, #recency-decay-factor').forEach(slider => {
+            slider.addEventListener('input', function() {
+                document.getElementById(this.id + '-value').textContent = this.value;
+            });
+        });
+        
+        function resetWeights() {
+            Object.keys(defaultWeights).forEach(type => {
+                const slider = document.querySelector('[data-type="' + type + '"]');
+                slider.value = defaultWeights[type];
+                document.getElementById(type + '-value').textContent = defaultWeights[type];
+            });
+        }
+        
+        function resetAllSettings() {
+            // Reset weights
+            resetWeights();
+            
+            // Reset advanced settings
+            Object.keys(defaultSettings).forEach(settingId => {
+                const slider = document.getElementById(settingId);
+                slider.value = defaultSettings[settingId];
+                document.getElementById(settingId + '-value').textContent = defaultSettings[settingId];
+            });
+        }
+        
+        function toggleAdvancedSettings() {
+            const content = document.getElementById('advanced-content');
+            const toggle = document.getElementById('advanced-toggle');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                toggle.classList.remove('expanded');
+                toggle.textContent = '▶';
+            } else {
+                content.classList.add('expanded');
+                toggle.classList.add('expanded');
+                toggle.textContent = '▼';
+            }
+        }
+        
+        function getWeights() {
+            const weights = [];
+            document.querySelectorAll('[data-type]').forEach(slider => {
+                const type = slider.getAttribute('data-type');
+                weights.push({ name: type, weight: parseFloat(slider.value) });
+            });
+            return weights;
+        }
+        
+        function getAdvancedSettings() {
+            return {
+                similarity_threshold: parseFloat(document.getElementById('similarity-threshold').value),
+                max_similar_attributes: parseInt(document.getElementById('max-similar-attributes').value),
+                max_attributes_per_type: parseInt(document.getElementById('max-attributes-per-type').value),
+                scoring_base: parseFloat(document.getElementById('scoring-base').value),
+                recency_decay_factor: parseFloat(document.getElementById('recency-decay-factor').value)
+            };
+        }
+        
+        async function performSearch() {
+            const searchText = document.getElementById('searchInput').value.trim();
+            if (!searchText) {
+                alert('Please enter a search query');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results-content');
+            resultsDiv.innerHTML = '<div class="loading">Searching for experts...</div>';
+            
+            try {
+                const searchSettings = {
+                    attribute_weights: getWeights(),
+                    ...getAdvancedSettings()
+                };
+                
+                const response = await fetch('/api/experts/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: searchText,
+                        page_size: 10,
+                        settings: searchSettings
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Search failed: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                window.lastSearchResults = data; // Store for expert card expansion
+                displayResults(data);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+            }
+        }
+        
+        function calculateExperienceBreakdown(expert) {
+            if (!expert.matching_experiences || expert.matching_experiences.length === 0) {
+                return { totalYears: 0, breakdown: {}, segments: [] };
+            }
+            
+            let totalYears = 0;
+            const attributeContributions = {};
+            
+            // Calculate total years and attribute contributions
+            expert.matching_experiences.forEach(exp => {
+                // Calculate years for this experience
+                const startDate = new Date(exp.start_date);
+                const endDate = new Date(exp.end_date);
+                const years = Math.max(0.1, (endDate - startDate) / (365.25 * 24 * 60 * 60 * 1000));
+                totalYears += years;
+                
+                // Count contribution by attribute type
+                if (exp.matching_attributes) {
+                    exp.matching_attributes.forEach(attr => {
+                        const attrType = attr.type || 'other';
+                        if (!attributeContributions[attrType]) {
+                            attributeContributions[attrType] = { years: 0, score: 0 };
+                        }
+                        attributeContributions[attrType].years += years;
+                        attributeContributions[attrType].score += (attr.contribution_score || 0);
+                    });
+                }
+            });
+            
+            // Calculate percentages and create segments
+            const segments = [];
+            const totalScore = expert.total_score || 1;
+            
+            Object.keys(attributeContributions).forEach(attrType => {
+                const contribution = attributeContributions[attrType];
+                const percentage = Math.max(1, (contribution.score / totalScore) * 100);
+                
+                segments.push({
+                    type: attrType,
+                    years: contribution.years,
+                    percentage: percentage,
+                    score: contribution.score
+                });
+            });
+            
+            // Sort by score contribution (highest first)
+            segments.sort((a, b) => b.score - a.score);
+            
+            return {
+                totalYears: totalYears,
+                breakdown: attributeContributions,
+                segments: segments
+            };
+        }
+        
+        function renderScoreBreakdown(expert) {
+            const breakdown = calculateExperienceBreakdown(expert);
+            
+            if (breakdown.totalYears === 0) {
+                return '';
+            }
+            
+            let html = '<div class="score-breakdown">';
+            
+            // Header with total years
+            html += '  <div class="breakdown-header">';
+            html += '    <span>Experience Breakdown</span>';
+            html += '    <span class="total-years">' + breakdown.totalYears.toFixed(1) + ' years matched</span>';
+            html += '  </div>';
+            
+            // Colored bar
+            html += '  <div class="breakdown-bar">';
+            breakdown.segments.forEach(segment => {
+                html += '    <div class="breakdown-segment ' + segment.type + '" ';
+                html += '         style="width: ' + segment.percentage.toFixed(1) + '%;" ';
+                html += '         title="' + segment.type + ': ' + segment.years.toFixed(1) + ' years, ' + segment.percentage.toFixed(1) + '% of score">';
+                
+                // Show percentage if segment is wide enough
+                if (segment.percentage > 8) {
+                    html += segment.percentage.toFixed(0) + '%';
+                }
+                
+                html += '    </div>';
+            });
+            html += '  </div>';
+            
+            // Legend
+            html += '  <div class="breakdown-legend">';
+            breakdown.segments.forEach(segment => {
+                html += '    <div class="legend-item">';
+                html += '      <div class="legend-color ' + segment.type + '"></div>';
+                html += '      <span>' + segment.type + ': ' + segment.years.toFixed(1) + 'y (' + segment.percentage.toFixed(1) + '%)</span>';
+                html += '    </div>';
+            });
+            html += '  </div>';
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results-content');
+            
+            let html = '<div class="search-meta">Found ' + data.search_metadata.total_experts + 
+                      ' experts in ' + data.search_metadata.search_time_ms + 'ms</div>';
+            
+            // Display extracted attributes if available
+            if (data.search_metadata.extracted_attributes) {
+                html += '<div class="extracted-attributes">';
+                html += '  <h5>🔍 Search Analysis - Attributes Found:</h5>';
+                html += '  <div style="font-size: 11px; margin-bottom: 8px; color: #666;">';
+                html += '    <span class="extracted-attribute matched">✓ Matched</span> ';
+                html += '    <span class="extracted-attribute no-match">✗ No Match</span>';
+                html += '  </div>';
+                
+                const extractedAttrs = data.search_metadata.extracted_attributes;
+                let hasAttributes = false;
+                
+                Object.keys(extractedAttrs).forEach(attrType => {
+                    if (extractedAttrs[attrType] && extractedAttrs[attrType].length > 0) {
+                        hasAttributes = true;
+                        html += '  <div class="attribute-group">';
+                        html += '    <span class="attribute-type">' + attrType + ':</span>';
+                        html += '    <div class="attribute-list">';
+                        
+                        extractedAttrs[attrType].forEach(attr => {
+                            const sourceClass = attr.source ? attr.source.replace('_', '-') : '';
+                            html += '      <span class="extracted-attribute ' + sourceClass + '">';
+                            html += attr.name + ' (' + (attr.relevance_score ? attr.relevance_score.toFixed(2) : 'N/A') + ')';
+                            html += '</span>';
+                        });
+                        
+                        html += '    </div>';
+                        html += '  </div>';
+                    }
+                });
+                
+                if (!hasAttributes) {
+                    html += '  <div style="color: #666; font-style: italic;">No specific attributes extracted - using semantic similarity search</div>';
+                }
+                
+                html += '</div>';
+            }
+            
+            // Show expert cards if we have any experts
+            if (!data.experts || data.experts.length === 0) {
+                html += '<div class="loading">No experts found for your search query.</div>';
+            } else {
+                // Simple expert cards
+                data.experts.forEach(expert => {
+                html += '<div class="expert-card">';
+                html += '  <div class="expert-header">';
+                html += '    <div class="expert-name">' + escapeHtml(expert.name || '');
+                if (expert.meta && expert.meta.profile_id) {
+                    html += '<span class="profile-id">ID: ' + expert.meta.profile_id + '</span>';
+                }
+                html += '</div>';
+                html += '    <div class="expert-score">' + (expert.total_score || 0) + '</div>';
+                html += '  </div>';
+                html += '  <div class="expert-summary">' + escapeHtml(expert.summary || 'No summary available') + '</div>';
+                
+                // Add score breakdown bar
+                html += renderScoreBreakdown(expert);
+                
+                // Show matching experiences
+                if (expert.matching_experiences && expert.matching_experiences.length > 0) {
+                    html += '  <div class="experiences">';
+                    expert.matching_experiences.forEach(exp => {
+                        html += '    <div class="experience">';
+                        
+                        // Clear position and employer display
+                        if (exp.position || exp.employer) {
+                            html += '      <div class="experience-title">';
+                            if (exp.position) {
+                                html += '        <div class="experience-position">' + escapeHtml(exp.position) + '</div>';
+                            }
+                            if (exp.employer) {
+                                html += '        <div class="experience-employer">at ' + escapeHtml(exp.employer) + '</div>';
+                            }
+                            html += '      </div>';
+                        }
+                        
+                        // Show dates
+                        if (exp.start_date || exp.end_date) {
+                            html += '      <div class="experience-dates">';
+                            html += '        <span class="date-range">';
+                            html += (exp.start_date || 'Unknown') + ' - ' + (exp.end_date || 'Unknown');
+                            html += '</span>';
+                            if (exp.score) {
+                                html += '        <span class="duration">(Score: ' + exp.score + ')</span>';
+                            }
+                            html += '      </div>';
+                        }
+                        
+                        // Show summary if available
+                        if (exp.summary && exp.summary.trim()) {
+                            html += '      <div class="experience-description">' + escapeHtml(exp.summary) + '</div>';
+                        }
+                        
+                        // Show matching attributes
+                        if (exp.matching_attributes && exp.matching_attributes.length > 0) {
+                            html += '      <div class="attributes">';
+                            exp.matching_attributes.forEach(attr => {
+                                html += '        <span class="attribute ' + (attr.type || '') + '">';
+                                html += escapeHtml(attr.name || '');
+                                html += '</span>';
+                            });
+                            html += '      </div>';
+                        }
+                        
+                        html += '    </div>';
+                    });
+                    html += '  </div>';
+                }
+                
+                html += '</div>';
+                });
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Allow Ctrl+Enter or Cmd+Enter to trigger search in textarea
+        document.getElementById('searchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+        
     </script>
 </body>
 </html>

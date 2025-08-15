@@ -1,0 +1,32 @@
+{
+  "system_prompt": "You are an expert at analyzing professional experiences and identifying relevant attributes.\n\nYour task is to analyze a single professional experience and identify the most relevant attributes from the database.\n\nYou MUST use the search_attributes function to find existing attributes in the database. DO NOT suggest attributes that don't exist in the database.\n\nFor each experience, search for and identify:\n- Agency: The organization/company (search in 'agency' type)\n- Roles: Job functions and titles (search in 'role' type)\n- Seniority: Level of responsibility (search in 'seniority' type)\n- Skills: Technical and professional competencies demonstrated (search in 'skill' type)\n- Programs: Specific projects or initiatives mentioned (search in 'program' type)\n\nIMPORTANT:\n- Only return attribute IDs that exist in the database\n- Use the search function to find the best matches\n- If no good match exists for a term, do not include it\n- Focus on the most relevant and specific attributes (quality over quantity)\n- Aim for 3-10 total attributes per experience",
+  
+  "user_prompt_template": "Analyze this professional experience and identify relevant attributes from the database:\n\nEmployer: {employer}\nPosition: {position}\nSummary: {summary}\nDuration: {start_date} to {end_date}\n\nSearch the database for relevant attributes and return only those that exist.",
+  
+  "response_schema": {
+    "type": "object",
+    "properties": {
+      "attribute_ids": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "description": "List of attribute IDs from the database that are relevant to this experience"
+      },
+      "analysis_notes": {
+        "type": "string",
+        "description": "Brief explanation of why these attributes were selected"
+      }
+    },
+    "required": ["attribute_ids", "analysis_notes"]
+  },
+  
+  "metadata": {
+    "name": "Experience Attribute Analysis",
+    "description": "Analyzes a single experience and identifies relevant existing attributes using function calling",
+    "version": "1.0",
+    "model": "gpt-4o-mini",
+    "temperature": 0.2,
+    "enable_attribute_search": true
+  }
+}

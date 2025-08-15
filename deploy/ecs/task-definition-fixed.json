@@ -8,10 +8,10 @@
   "containerDefinitions": [
     {
       "name": "cerca-api",
-      "image": "471112664201.dkr.ecr.us-east-1.amazonaws.com/cerca-api:v20250806-optimized-search",
+      "image": "471112664201.dkr.ecr.us-east-1.amazonaws.com/cerca-api:nuclear-1755229859",
       "portMappings": [
         {
-          "containerPort": 5000,
+          "containerPort": 5001,
           "protocol": "tcp"
         }
       ],
@@ -23,7 +23,7 @@
         },
         {
           "name": "PORT",
-          "value": "5000"
+          "value": "5001"
         },
         {
           "name": "FLASK_DEBUG",
@@ -43,7 +43,7 @@
       "healthCheck": {
         "command": [
           "CMD-SHELL",
-          "curl -f http://localhost:5000/health || exit 1"
+          "curl -f http://localhost:5001/health || exit 1"
         ],
         "interval": 30,
         "timeout": 10,

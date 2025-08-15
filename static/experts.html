@@ -21,43 +21,29 @@
             overflow: hidden;
         }
         
+        /* Header component styles */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            position: relative;
+            color: white; padding: 20px; text-align: center; position: relative;
         }
         
         .nav-links {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            display: flex;
-            gap: 15px;
+            position: absolute; top: 20px; left: 20px; display: flex; gap: 15px;
         }
         
         .nav-link {
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            font-size: 14px;
-            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9); text-decoration: none; padding: 8px 16px;
+            border-radius: 20px; background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px); transition: all 0.3s ease;
+            font-size: 14px; font-weight: 500;
         }
         
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.2); color: white; transform: translateY(-1px);
         }
         
         .nav-link.active {
-            background: rgba(255, 255, 255, 0.3);
-            color: white;
+            background: rgba(255, 255, 255, 0.3); color: white;
         }
         
         .content {
@@ -584,13 +570,8 @@
 </head>
 <body>
     <div class="container-fluid">
-        <div class="header">
-            <div class="nav-links">
-                <a href="/ui/search" class="nav-link">🔍 Search</a>
-                <a href="/ui/experts" class="nav-link active">👥 All Experts</a>
-            </div>
-            <h1>All Experts</h1>
-            <p>Browse and explore all catalogued experts with their experiences and attributes</p>
+        <div id="header-container">
+            <!-- Header will be rendered here by the component -->
         </div>
         
         <div class="content">
@@ -645,6 +626,7 @@
         </div>
     </div>
 
+    <script src="/static/components/header.js"></script>
     <script>
         let expertsData = [];
         let expandedExperts = new Set();
@@ -657,7 +639,18 @@
         let currentSearchQuery = '';
         
         // Load experts when page loads
-        document.addEventListener('DOMContentLoaded', () => loadExperts(1));
+        document.addEventListener('DOMContentLoaded', function() {
+            // Render the header
+            const header = new CercaHeader(
+                'All Experts', 
+                'Browse and explore all catalogued experts with their experiences and attributes',
+                'experts'
+            );
+            document.getElementById('header-container').innerHTML = header.render();
+            
+            // Load experts
+            loadExperts(1);
+        });
         
         async function loadExperts(page = 1, newPageSize = null, searchQuery = null) {
             if (isLoading) return;
@@ -887,9 +880,33 @@
                     const endDate = new Date(exp.end_date).toLocaleDateString();
                     const duration = calculateDuration(exp.start_date, exp.end_date);
                     
+                    // Create experience title from position and employer
+                    let experienceTitle = '';
+                    if (exp.position && exp.employer) {
+                        experienceTitle = `${exp.position} at ${exp.employer}`;
+                    } else if (exp.position) {
+                        experienceTitle = exp.position;
+                    } else if (exp.employer) {
+                        experienceTitle = exp.employer;
+                    } else {
+                        experienceTitle = 'Experience';
+                    }
+                    
                     html += `
                         <div class="experience">
-                            <div class="experience-summary">${escapeHtml(exp.summary)}</div>
+                            <div class="experience-summary"><strong>${escapeHtml(experienceTitle)}</strong></div>
+                    `;
+                    
+                    // Show summary if different from title and available
+                    if (exp.summary && exp.summary.trim() && exp.summary !== experienceTitle) {
+                        html += `
+                            <div style="margin: 8px 0; color: #6c757d; font-size: 14px; line-height: 1.4;">
+                                ${escapeHtml(exp.summary)}
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
                             <div class="experience-dates">
                                 <span class="date-range">${startDate} - ${endDate}</span>
                                 <span class="duration">(${duration})</span>

@@ -20,6 +20,8 @@ class AttributeResource(Resource):
                     'name': attribute.name,
                     'type': attribute.type,
                     'summary': attribute.summary,
+                    'depth': attribute.depth,
+                    'parent_id': attribute.parent_id,
                     'embedding': attribute.embedding,
                     'experiences': [exp.id for exp in attribute.experiences]
                 }
@@ -198,14 +200,22 @@ class AttributeListResource(Resource):
                 if attribute_type:
                     query = query.filter(Attribute.type == attribute_type)
                 
+                # Get total count with same filters
+                total_count = query.count()
+                
                 attributes = query.limit(limit).all()
                 return {
+                    'total_count': total_count,
+                    'limit': limit,
+                    'type_filter': attribute_type,
                     'attributes': [
                         {
                             'id': attr.id,
                             'name': attr.name,
                             'type': attr.type,
                             'summary': attr.summary,
+                            'depth': attr.depth,
+                            'parent_id': attr.parent_id,
                             'experiences': [exp.id for exp in attr.experiences]
                         } for attr in attributes
                     ]

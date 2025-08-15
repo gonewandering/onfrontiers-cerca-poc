@@ -2,9 +2,7 @@
 
 import os
 
-# Important: do not hardcode API keys in source. Use environment variables instead.
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-# OPENAI_API_KEY previously hardcoded has been removed
 SEARCHABLE_ATTRIBUTE_TYPES = ["agency", "role", "seniority", "skill", "program"]
 
 # Minimum similarity threshold for database attribute matching
@@ -26,11 +24,9 @@ SEARCH_CONFIG = {
     "recency_decay_factor": 0.1,
     "default_page_size": 20,
     "max_page_size": 100,
-    # Cosine similarity settings
     "use_cosine_similarity": True,
     "similarity_threshold": 0.4,  # Minimum similarity to consider a match
     "max_similar_attributes": 20,  # Max attributes to consider per search
     "similarity_weight": 1.0,  # How much to weight similarity in scoring
-    # Attribute weighting
     "attribute_weights": ATTRIBUTE_WEIGHTS
 }

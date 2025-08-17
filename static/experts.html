@@ -665,12 +665,36 @@
             );
             document.getElementById('header-container').innerHTML = header.render();
             
-            // Load experts
-            loadExperts(1);
+            // Check for search parameter to highlight specific expert
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            
+            // Load experts with search if provided
+            if (searchParam) {
+                loadExperts(1, null, searchParam).then(() => {
+                    // Auto-expand the first expert found (should be the target)
+                    if (expertsData.length > 0) {
+                        const targetExpert = expertsData[0];
+                        setTimeout(async () => {
+                            await toggleExpert(targetExpert.id);
+                            setTimeout(() => {
+                                const expertCard = document.getElementById(`expert-${targetExpert.id}`);
+                                if (expertCard) {
+                                    expertCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    expertCard.style.border = '2px solid #667eea';
+                                    expertCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
+                                }
+                            }, 300);
+                        }, 500);
+                    }
+                });
+            } else {
+                loadExperts(1);
+            }
         });
         
         async function loadExperts(page = 1, newPageSize = null, searchQuery = null) {
-            if (isLoading) return;
+            if (isLoading) return Promise.resolve();
             
             if (newPageSize) {
                 pageSize = newPageSize;
@@ -744,6 +768,46 @@
                 countElement.textContent = 'Error loading experts';
             } finally {
                 isLoading = false;
+            }
+        }
+        
+        async function highlightExpertByProfileId(profileId) {
+            // Search for expert by profile_id using the API search functionality
+            try {
+                await loadExperts(1, null, profileId);
+                
+                // Find the expert with matching profile_id in the loaded results
+                const targetExpert = expertsData.find(exp => exp.meta && exp.meta.profile_id === profileId);
+                if (targetExpert) {
+                    // Expand and highlight the expert
+                    setTimeout(async () => {
+                        await toggleExpert(targetExpert.id);
+                        setTimeout(() => {
+                            const expertCard = document.getElementById(`expert-${targetExpert.id}`);
+                            if (expertCard) {
+                                expertCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                expertCard.style.border = '2px solid #667eea';
+                                expertCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
+                            }
+                        }, 300);
+                    }, 500);
+                } else {
+                    // Expert not found in search results
+                    const container = document.getElementById('expertsContainer');
+                    container.innerHTML = `
+                        <div class="error">
+                            Expert with profile ID "${profileId}" not found in database.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error finding expert:', error);
+                const container = document.getElementById('expertsContainer');
+                container.innerHTML = `
+                    <div class="error">
+                        Error searching for expert: ${error.message}
+                    </div>
+                `;
             }
         }
         

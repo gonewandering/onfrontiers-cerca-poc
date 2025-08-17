@@ -18,6 +18,7 @@ class CercaHeader {
                         <a href="/ui/search" class="nav-link ${this.activeView === 'search' ? 'active' : ''}">🔍 Search</a>
                         <a href="/ui/experts" class="nav-link ${this.activeView === 'experts' ? 'active' : ''}">👥 Experts</a>
                         <a href="/ui/prompts" class="nav-link ${this.activeView === 'prompts' ? 'active' : ''}">⚙️ Prompts</a>
+                        <a href="/ui/evaluations" class="nav-link ${this.activeView === 'evaluations' ? 'active' : ''}">📊 Evaluations</a>
                     </div>
                 </nav>
                 <div class="page-header">

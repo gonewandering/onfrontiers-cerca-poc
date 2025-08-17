@@ -18,11 +18,16 @@
         /* Header component styles */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 20px; text-align: center; position: relative;
+            color: white;
+        }
+        
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .nav-links {
-            position: absolute; top: 20px; left: 20px; display: flex; gap: 15px;
+            display: flex; gap: 15px; align-items: center;
         }
         
         .nav-link {
@@ -38,6 +43,18 @@
         
         .nav-link.active {
             background: rgba(255, 255, 255, 0.3); color: white;
+        }
+        
+        .page-header {
+            text-align: center; padding: 30px 20px;
+        }
+        
+        .page-header h1 {
+            margin: 0 0 8px 0; font-size: 28px; font-weight: 600;
+        }
+        
+        .page-header p {
+            margin: 0; opacity: 0.9; font-size: 16px;
         }
         
         .content { padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }

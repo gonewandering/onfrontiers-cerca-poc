@@ -70,6 +70,20 @@ def prompts_ui():
 def search_ui():
     return send_from_directory('static', 'search.html')
 
+@app.route("/ui/evaluations")
+def evaluations_ui():
+    return send_from_directory('static', 'evaluations.html')
+
+# Import evaluation routes
+from routes.evaluations import evaluation_dashboard, evaluation_details, evaluation_test_cases, evaluation_api_data, evaluation_list_api
+
+# Add evaluation routes to app
+app.add_url_rule('/evaluations', 'evaluation_dashboard', evaluation_dashboard)
+app.add_url_rule('/evaluations/<filename>', 'evaluation_details', evaluation_details)
+app.add_url_rule('/evaluations/<filename>/test-cases', 'evaluation_test_cases', evaluation_test_cases)
+app.add_url_rule('/api/evaluations/<filename>/data', 'evaluation_api_data', evaluation_api_data)
+app.add_url_rule('/api/evaluations/list', 'evaluation_list_api', evaluation_list_api)
+
 if __name__ == '__main__':
     # Use environment variables for production configuration
     port = int(os.getenv('PORT', 5001))

@@ -13,8 +13,10 @@ flask-migrate = "*"
 numpy = "*"
 psycopg2-binary = "*"
 pgvector = "*"
-requests = "*"
 python-dotenv = "*"
+pandas = "*"
+requests = "*"
+openpyxl = "*"
 
 [dev-packages]
 

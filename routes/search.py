@@ -356,7 +356,8 @@ class ExpertSearchResource(Resource):
                         'position': row.position,
                         'employer': row.employer,
                         'attribute_id': attr_id,
-                        'score': exp_score
+                        'score': exp_score,
+                        'duration_years': float(row.duration_years)
                     })
             
             # Sort experts by total score
@@ -391,8 +392,10 @@ class ExpertSearchResource(Resource):
             
             # Build response in score order
             expert_results = []
+            print(f"DEBUG - About to process {len(paginated_experts)} paginated experts")
             
             for expert_id, total_score in paginated_experts:
+                print(f"DEBUG - Processing expert {expert_id} with score {total_score}")
                 # Find the expert object
                 expert = next(e for e in experts if e.id == expert_id)
                 
@@ -446,31 +449,112 @@ class ExpertSearchResource(Resource):
                     exp['score'] = round(exp['total_score'], 2)
                     del exp['total_score']
                 
-                # Calculate score breakdown by attribute type
+                # Calculate score breakdown by attribute type with detailed matching information
                 score_by_type = {}
-                for exp_detail in experience_details[expert_id]:
-                    attr_id = exp_detail['attribute_id']
-                    attr_info = attr_similarity.get(attr_id, {'similarity': 1.0, 'weight': 1.0})
+                print(f"DEBUG - Starting SIMPLIFIED enhanced score breakdown for expert {expert_id}")
+                try:
+                    # First pass: collect basic data
+                    for exp_detail in experience_details[expert_id]:
+                        attr_id = exp_detail['attribute_id']
+                        attr_info = attr_similarity.get(attr_id, {'similarity': 1.0, 'weight': 1.0})
+                        exp_years = round(float(exp_detail.get('duration_years', 0)), 1)
+                        
+                        # Find attribute type and name
+                        attr_type = None
+                        attr_name = None
+                        for attr in expert.experiences:
+                            if attr.id == exp_detail['experience_id']:
+                                for attribute in attr.attributes:
+                                    if attribute.id == attr_id:
+                                        attr_type = attribute.type
+                                        attr_name = attribute.name
+                                        break
+                                break
+                        
+                        if attr_type and attr_name:
+                            # Initialize if needed
+                            if attr_type not in score_by_type:
+                                score_by_type[attr_type] = {
+                                    'type_weight': attr_info['weight'],
+                                    'total_contribution': 0.0,
+                                    'match_count': 0,
+                                    'total_years': 0.0,
+                                    'matched_terms': []
+                                }
+                            
+                            # Add to totals
+                            score_by_type[attr_type]['total_contribution'] += exp_detail['score']
+                            score_by_type[attr_type]['match_count'] += 1
+                            score_by_type[attr_type]['total_years'] += exp_years
+                            
+                            # Add matched term (simple version to avoid IndexError)
+                            existing_term = any(t['name'] == attr_name for t in score_by_type[attr_type]['matched_terms'])
+                            if not existing_term:
+                                # Simple extracted term lookup
+                                extracted_term = 'N/A'
+                                if attr_type in search_attributes and search_attributes[attr_type]:
+                                    for attr_data in search_attributes[attr_type]:
+                                        if attr_data.get('id') == attr_id:
+                                            extracted_term = attr_data.get('extracted_term', 'N/A')
+                                            break
+                                
+                                score_by_type[attr_type]['matched_terms'].append({
+                                    'name': attr_name,
+                                    'similarity_score': round(float(attr_info.get('similarity', 0.0)), 3),
+                                    'extracted_term': extracted_term,
+                                    'years': exp_years
+                                })
                     
-                    # Find the attribute type
-                    attr_type = None
-                    for attr in expert.experiences:
-                        if attr.id == exp_detail['experience_id']:
-                            for attribute in attr.attributes:
-                                if attribute.id == attr_id:
-                                    attr_type = attribute.type
-                                    break
-                            break
+                    print(f"DEBUG - SIMPLIFIED enhanced calculation completed successfully")
+
+                except Exception as e:
+                    print(f"ERROR - Enhanced score breakdown failed: {str(e)}")
+                    print(f"ERROR - Exception type: {type(e).__name__}")
+                    import traceback
+                    traceback.print_exc()
+                    print(f"ERROR - Falling back to basic score breakdown")
+                    # Fall back to basic score breakdown
+                    score_by_type = {}
+                    for exp_detail in experience_details[expert_id]:
+                        attr_id = exp_detail['attribute_id']
+                        attr_info = attr_similarity.get(attr_id, {'similarity': 1.0, 'weight': 1.0})
+                        # Find basic attribute type
+                        attr_type = None
+                        for attr in expert.experiences:
+                            if attr.id == exp_detail['experience_id']:
+                                for attribute in attr.attributes:
+                                    if attribute.id == attr_id:
+                                        attr_type = attribute.type
+                                        break
+                                break
+                        if attr_type:
+                            if attr_type not in score_by_type:
+                                score_by_type[attr_type] = {
+                                    'type_weight': attr_info['weight'],
+                                    'total_contribution': 0.0,
+                                    'match_count': 0
+                                }
+                            score_by_type[attr_type]['total_contribution'] += exp_detail['score']
+                            score_by_type[attr_type]['match_count'] += 1
+
+                # Create final score breakdown with enhanced fields (if available)
+                final_score_breakdown = {}
+                print(f"DEBUG - Pre-final score_by_type: {score_by_type}")
+                for attr_type, data in score_by_type.items():
+                    breakdown_entry = {
+                        'type_weight': data['type_weight'],
+                        'total_contribution': round(data['total_contribution'], 2),
+                        'match_count': data['match_count']
+                    }
+                    # Add enhanced fields if they exist
+                    if 'total_years' in data:
+                        breakdown_entry['total_years'] = round(data['total_years'], 1)
+                    if 'matched_terms' in data:
+                        breakdown_entry['matched_terms'] = data['matched_terms']
                     
-                    if attr_type:
-                        if attr_type not in score_by_type:
-                            score_by_type[attr_type] = {
-                                'type_weight': attr_info['weight'],
-                                'total_contribution': 0.0,
-                                'match_count': 0
-                            }
-                        score_by_type[attr_type]['total_contribution'] += exp_detail['score']
-                        score_by_type[attr_type]['match_count'] += 1
+                    final_score_breakdown[attr_type] = breakdown_entry
+                
+                print(f"DEBUG - Final score breakdown for {expert.name}: {final_score_breakdown}")
 
                 expert_result = {
                     'id': expert.id,
@@ -480,15 +564,10 @@ class ExpertSearchResource(Resource):
                     'meta': expert.meta,
                     'total_score': round(total_score, 2),
                     'matching_experiences': matching_experiences,
-                    'score_breakdown': {
-                        attr_type: {
-                            'type_weight': data['type_weight'],
-                            'total_contribution': round(data['total_contribution'], 2),
-                            'match_count': data['match_count']
-                        }
-                        for attr_type, data in score_by_type.items()
-                    }
+                    'score_breakdown': final_score_breakdown
                 }
+                
+                print(f"DEBUG - Expert result score_breakdown: {final_score_breakdown}")
                 
                 expert_results.append(expert_result)
             
@@ -496,7 +575,8 @@ class ExpertSearchResource(Resource):
             total_count = len(expert_scores)
             search_time_ms = round((time.time() - start_time) * 1000, 2)
             
-            return {
+            # Debug: Check final response data
+            final_response = {
                 'experts': expert_results,
                 'search_metadata': {
                     'extracted_attributes': extracted_attributes,
@@ -517,7 +597,16 @@ class ExpertSearchResource(Resource):
                         for weight_item in effective_config.get('attribute_weights', ATTRIBUTE_WEIGHTS)
                     }
                 }
-            }, 200
+            }
+            
+            # Debug final response structure
+            if final_response['experts']:
+                first_expert = final_response['experts'][0]
+                print(f"DEBUG - Final response expert score_breakdown keys: {list(first_expert['score_breakdown'].keys())}")
+                for attr_type, breakdown in first_expert['score_breakdown'].items():
+                    print(f"DEBUG - Final response {attr_type} breakdown keys: {list(breakdown.keys())}")
+            
+            return final_response, 200
             
         except Exception as e:
             print(f"ERROR - Expert search failed: {str(e)}")

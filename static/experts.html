@@ -318,6 +318,40 @@
             gap: 4px;
         }
         
+        .onfrontiers-link {
+            margin: 4px 0 8px 0;
+        }
+        
+        .onfrontiers-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .onfrontiers-link a:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .expert-header.expanded .onfrontiers-link a {
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .expert-header.expanded .onfrontiers-link a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        
         .expand-indicator {
             display: flex;
             align-items: center;
@@ -909,9 +943,20 @@
             header.className = 'expert-header';
             header.onclick = () => toggleExpert(expert.id);
             
+            // Get profile ID from meta data
+            const profileId = expert.meta && expert.meta.profile_id ? expert.meta.profile_id : null;
+            const onFrontiersLink = profileId ? `
+                <div class="onfrontiers-link">
+                    <a href="https://app.onfrontiers.com/profile/${profileId}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
+                        🔗 See OnFrontiers Profile
+                    </a>
+                </div>
+            ` : '';
+            
             header.innerHTML = `
                 <div class="expert-info">
                     <div class="expert-name">${escapeHtml(expert.name)}</div>
+                    ${onFrontiersLink}
                     <div class="expert-summary">${escapeHtml(expert.summary || 'No summary available')}</div>
                     <div class="expert-meta">
                         <div class="meta-item">

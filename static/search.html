@@ -678,7 +678,7 @@
             
             Object.keys(attributeContributions).forEach(attrType => {
                 const contribution = attributeContributions[attrType];
-                const percentage = Math.max(1, (contribution.score / totalScore) * 100);
+                const percentage = (contribution.score / totalScore) * 100;
                 
                 segments.push({
                     type: attrType,
@@ -717,7 +717,9 @@
             html += '  <div class="breakdown-bar">';
             breakdown.segments.forEach(segment => {
                 html += '    <div class="breakdown-segment ' + segment.type + '" ';
-                html += '         style="width: ' + segment.percentage.toFixed(1) + '%;" ';
+                // Use minimum width of 0.5% for visual bar, but keep accurate percentage in text
+                const visualWidth = Math.max(0.5, segment.percentage);
+                html += '         style="width: ' + visualWidth.toFixed(1) + '%;" ';
                 html += '         title="' + segment.type + ': ' + segment.years.toFixed(1) + ' years, ' + segment.percentage.toFixed(1) + '% of score">';
                 
                 // Show percentage if segment is wide enough

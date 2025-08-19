@@ -124,6 +124,11 @@
         }
         .expert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .expert-name { font-size: 18px; font-weight: 600; color: #343a40; }
+        .expert-name a:hover { 
+            color: #667eea !important; 
+            text-decoration: underline !important;
+            cursor: pointer;
+        }
         .expert-score {
             background: #667eea; color: white; padding: 4px 8px;
             border-radius: 12px; font-size: 14px; font-weight: 500;
@@ -790,9 +795,13 @@
                 data.experts.forEach(expert => {
                 html += '<div class="expert-card">';
                 html += '  <div class="expert-header">';
-                html += '    <div class="expert-name">' + escapeHtml(expert.name || '');
+                html += '    <div class="expert-name">';
+                // Add clickable link to expert profile
                 if (expert.meta && expert.meta.profile_id) {
+                    html += '<a href="#" onclick="navigateToExpert(\'' + expert.meta.profile_id + '\')" style="color: #343a40; text-decoration: none; font-weight: 600;">' + escapeHtml(expert.name || '') + '</a>';
                     html += '<span class="profile-id">ID: ' + expert.meta.profile_id + '</span>';
+                } else {
+                    html += escapeHtml(expert.name || '');
                 }
                 html += '</div>';
                 html += '    <div class="expert-score">' + (expert.total_score || 0) + '</div>';
@@ -872,6 +881,19 @@
         
         addSearchKeyHandler('solicitationSummary');
         addSearchKeyHandler('solicitationRole');
+        
+        // Navigation function to link to experts tab
+        function extractLastNameFromProfileId(profileId) {
+            if (!profileId || profileId.length < 2) return profileId;
+            let lastName = profileId.substring(1); // Remove first character
+            lastName = lastName.replace(/\d+$/, ''); // Remove trailing numbers
+            return lastName;
+        }
+        
+        function navigateToExpert(profileId) {
+            const lastName = extractLastNameFromProfileId(profileId);
+            window.open(`/ui/experts?search=${lastName}`, '_blank');
+        }
         
     </script>
 </body>

@@ -296,8 +296,17 @@
             color: #495057;
         }
         
-        .total-years {
-            color: #667eea;
+        .total-info {
+            color: #667eea; font-size: 14px; font-weight: 600;
+        }
+        
+        .breakdown-section {
+            margin-bottom: 16px;
+        }
+        
+        .breakdown-title {
+            font-size: 13px; font-weight: 600; color: #495057; 
+            margin-bottom: 6px; display: flex; align-items: center; gap: 4px;
         }
         
         .breakdown-bar {
@@ -672,29 +681,40 @@
                 }
             });
             
-            // Calculate percentages and create segments
-            const segments = [];
+            // Calculate percentages for both years and score distributions
+            const yearSegments = [];
+            const scoreSegments = [];
             const totalScore = expert.total_score || 1;
             
             Object.keys(attributeContributions).forEach(attrType => {
                 const contribution = attributeContributions[attrType];
-                const percentage = (contribution.score / totalScore) * 100;
                 
-                segments.push({
+                // Years percentage
+                const yearPercentage = totalYears > 0 ? (contribution.years / totalYears) * 100 : 0;
+                yearSegments.push({
                     type: attrType,
                     years: contribution.years,
-                    percentage: percentage,
-                    score: contribution.score
+                    percentage: yearPercentage
+                });
+                
+                // Score percentage
+                const scorePercentage = (contribution.score / totalScore) * 100;
+                scoreSegments.push({
+                    type: attrType,
+                    score: contribution.score,
+                    percentage: scorePercentage
                 });
             });
             
-            // Sort by score contribution (highest first)
-            segments.sort((a, b) => b.score - a.score);
+            // Sort both by their respective contributions (highest first)
+            yearSegments.sort((a, b) => b.percentage - a.percentage);
+            scoreSegments.sort((a, b) => b.percentage - a.percentage);
             
             return {
                 totalYears: totalYears,
                 breakdown: attributeContributions,
-                segments: segments
+                yearSegments: yearSegments,
+                scoreSegments: scoreSegments
             };
         }
         
@@ -707,38 +727,78 @@
             
             let html = '<div class="score-breakdown">';
             
-            // Header with total years
+            // Header with total years and score
             html += '  <div class="breakdown-header">';
-            html += '    <span>Experience Breakdown</span>';
-            html += '    <span class="total-years">' + breakdown.totalYears.toFixed(1) + ' years matched</span>';
+            html += '    <span>Experience Analysis</span>';
+            html += '    <span class="total-info">' + breakdown.totalYears.toFixed(1) + ' years | Score: ' + (expert.total_score || 0).toFixed(1) + '</span>';
             html += '  </div>';
             
-            // Colored bar
-            html += '  <div class="breakdown-bar">';
-            breakdown.segments.forEach(segment => {
-                html += '    <div class="breakdown-segment ' + segment.type + '" ';
-                // Use minimum width of 0.5% for visual bar, but keep accurate percentage in text
-                const visualWidth = Math.max(0.5, segment.percentage);
-                html += '         style="width: ' + visualWidth.toFixed(1) + '%;" ';
-                html += '         title="' + segment.type + ': ' + segment.years.toFixed(1) + ' years, ' + segment.percentage.toFixed(1) + '% of score">';
-                
-                // Show percentage if segment is wide enough
-                if (segment.percentage > 8) {
-                    html += segment.percentage.toFixed(0) + '%';
+            // YEARS DISTRIBUTION BAR
+            html += '  <div class="breakdown-section">';
+            html += '    <div class="breakdown-title">📅 Experience Distribution (by Years)</div>';
+            html += '    <div class="breakdown-bar">';
+            breakdown.yearSegments.forEach(segment => {
+                if (segment.percentage > 0) {
+                    html += '      <div class="breakdown-segment ' + segment.type + '" ';
+                    html += '           style="width: ' + segment.percentage.toFixed(1) + '%;" ';
+                    html += '           title="' + segment.type + ': ' + segment.years.toFixed(1) + ' years (' + segment.percentage.toFixed(1) + '% of total experience)">';
+                    
+                    // Show percentage if segment is wide enough
+                    if (segment.percentage > 8) {
+                        html += segment.percentage.toFixed(0) + '%';
+                    }
+                    
+                    html += '      </div>';
                 }
-                
-                html += '    </div>';
             });
+            html += '    </div>';
+            
+            // Years legend
+            html += '    <div class="breakdown-legend">';
+            breakdown.yearSegments.forEach(segment => {
+                if (segment.percentage > 0) {
+                    html += '      <div class="legend-item">';
+                    html += '        <div class="legend-color ' + segment.type + '"></div>';
+                    html += '        <span>' + segment.type + ': ' + segment.years.toFixed(1) + 'y (' + segment.percentage.toFixed(1) + '%)</span>';
+                    html += '      </div>';
+                }
+            });
+            html += '    </div>';
             html += '  </div>';
             
-            // Legend
-            html += '  <div class="breakdown-legend">';
-            breakdown.segments.forEach(segment => {
-                html += '    <div class="legend-item">';
-                html += '      <div class="legend-color ' + segment.type + '"></div>';
-                html += '      <span>' + segment.type + ': ' + segment.years.toFixed(1) + 'y (' + segment.percentage.toFixed(1) + '%)</span>';
-                html += '    </div>';
+            // SCORE CONTRIBUTION BAR
+            html += '  <div class="breakdown-section">';
+            html += '    <div class="breakdown-title">🎯 Score Contribution (by Weight)</div>';
+            html += '    <div class="breakdown-bar">';
+            breakdown.scoreSegments.forEach(segment => {
+                // Only display segments with actual contribution (> 0%)
+                if (segment.percentage > 0) {
+                    html += '      <div class="breakdown-segment ' + segment.type + '" ';
+                    html += '           style="width: ' + segment.percentage.toFixed(1) + '%;" ';
+                    html += '           title="' + segment.type + ': ' + segment.score.toFixed(1) + ' points (' + segment.percentage.toFixed(1) + '% of total score)">';
+                    
+                    // Show percentage if segment is wide enough
+                    if (segment.percentage > 8) {
+                        html += segment.percentage.toFixed(0) + '%';
+                    }
+                    
+                    html += '      </div>';
+                }
             });
+            html += '    </div>';
+            
+            // Score legend - show all segments including 0% ones
+            html += '    <div class="breakdown-legend">';
+            breakdown.scoreSegments.forEach(segment => {
+                html += '      <div class="legend-item">';
+                html += '        <div class="legend-color ' + segment.type + '"></div>';
+                const scoreText = segment.percentage > 0 ? 
+                    segment.type + ': ' + segment.score.toFixed(1) + ' pts (' + segment.percentage.toFixed(1) + '%)' :
+                    segment.type + ': 0.0 pts (0.0%) - not weighted';
+                html += '        <span style="' + (segment.percentage === 0 ? 'color: #6c757d; font-style: italic;' : '') + '">' + scoreText + '</span>';
+                html += '      </div>';
+            });
+            html += '    </div>';
             html += '  </div>';
             
             html += '</div>';

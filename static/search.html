@@ -835,6 +835,15 @@
                             html += '        <span class="date-range">';
                             html += (exp.start_date || 'Unknown') + ' - ' + (exp.end_date || 'Unknown');
                             html += '</span>';
+                            
+                            // Calculate and show years for this experience
+                            if (exp.start_date && exp.end_date) {
+                                const startDate = new Date(exp.start_date);
+                                const endDate = new Date(exp.end_date);
+                                const years = Math.max(0.1, (endDate - startDate) / (365.25 * 24 * 60 * 60 * 1000));
+                                html += '        <span class="duration">(' + years.toFixed(1) + ' years)</span>';
+                            }
+                            
                             if (exp.score) {
                                 html += '        <span class="duration">(Score: ' + exp.score + ')</span>';
                             }

@@ -16,6 +16,7 @@ from routes.experiences import ExperienceResource, ExperienceListResource
 from routes.attributes import AttributeResource, AttributeListResource
 from routes.search import ExpertSearchResource
 from routes.prompts import PromptResource, PromptListResource, PromptByNameResource, PromptVersionActivateResource
+from routes.solicitation_roles import SolicitationRolesListResource, SolicitationRoleResource
 
 app = Flask(__name__)
 
@@ -49,6 +50,9 @@ api.add_resource(PromptResource, '/api/prompts/<int:prompt_id>')
 api.add_resource(PromptVersionActivateResource, '/api/prompts/<int:prompt_id>/activate')
 api.add_resource(PromptByNameResource, '/api/prompts/by-name/<string:template_name>')
 
+api.add_resource(SolicitationRolesListResource, '/api/solicitation-roles')
+api.add_resource(SolicitationRoleResource, '/api/solicitation-roles/<string:role_id>')
+
 @app.route("/")
 def hello_world():
     return "<p>Cerca Expert Search API</p>"
@@ -73,6 +77,10 @@ def search_ui():
 @app.route("/ui/evaluations")
 def evaluations_ui():
     return send_from_directory('static', 'evaluations.html')
+
+@app.route("/ui/solicitation-roles")
+def solicitation_roles_ui():
+    return send_from_directory('static', 'solicitation_roles.html')
 
 # Import evaluation routes
 from routes.evaluations import evaluation_dashboard, evaluation_details, evaluation_test_cases, evaluation_api_data, evaluation_list_api

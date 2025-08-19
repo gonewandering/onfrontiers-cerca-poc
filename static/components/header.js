@@ -17,6 +17,7 @@ class CercaHeader {
                         <a href="/ui/search" class="nav-link ${this.activeView === 'searchv' ? 'active' : ''}">OnFrontiers CERCA</a>
                         <a href="/ui/search" class="nav-link ${this.activeView === 'search' ? 'active' : ''}">🔍 Search</a>
                         <a href="/ui/experts" class="nav-link ${this.activeView === 'experts' ? 'active' : ''}">👥 Experts</a>
+                        <a href="/ui/solicitation-roles" class="nav-link ${this.activeView === 'solicitation-roles' ? 'active' : ''}">📋 Solicitation Roles</a>
                         <a href="/ui/prompts" class="nav-link ${this.activeView === 'prompts' ? 'active' : ''}">⚙️ Prompts</a>
                         <a href="/ui/evaluations" class="nav-link ${this.activeView === 'evaluations' ? 'active' : ''}">📊 Evaluations</a>
                     </div>

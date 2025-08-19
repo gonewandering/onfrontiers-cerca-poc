@@ -93,6 +93,29 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
+        .role-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .role-dropdown {
+            padding: 10px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+        
+        .role-dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
         .search-hint {
             font-size: 12px;
             color: #6c757d;
@@ -394,8 +417,13 @@
                     </div>
                     <div class="input-group">
                         <label for="solicitationRole">Role Requirements</label>
-                        <textarea id="solicitationRole" class="search-input" rows="3" 
-                                 placeholder="CISO, Program Manager, Technical SME, etc..."></textarea>
+                        <div class="role-input-container">
+                            <select id="roleDropdown" class="role-dropdown">
+                                <option value="">Select a predefined role...</option>
+                            </select>
+                            <textarea id="solicitationRole" class="search-input" rows="3" 
+                                     placeholder="CISO, Program Manager, Technical SME, etc..."></textarea>
+                        </div>
                     </div>
                     <div class="search-hint">
                         💡 Fill in at least one field above. Press Ctrl+Enter (or Cmd+Enter) to search from any field.
@@ -506,6 +534,9 @@
                 'search'
             );
             document.getElementById('header-container').innerHTML = header.render();
+            
+            // Load solicitation roles for dropdown
+            loadSolicitationRoles();
         });
 
         const defaultWeights = { agency: 1.5, role: 2.0, seniority: 1.0, skill: 1.8, program: 1.2 };
@@ -968,6 +999,41 @@
         function navigateToExpert(profileId) {
             const lastName = extractLastNameFromProfileId(profileId);
             window.open(`/ui/experts?search=${lastName}`, '_blank');
+        }
+        
+        // Solicitation role functions
+        async function loadSolicitationRoles() {
+            try {
+                const response = await fetch('/api/solicitation-roles');
+                if (!response.ok) {
+                    console.error('Failed to load solicitation roles');
+                    return;
+                }
+                
+                const data = await response.json();
+                const dropdown = document.getElementById('roleDropdown');
+                
+                // Clear existing options except the first placeholder
+                dropdown.innerHTML = '<option value="">Select a predefined role...</option>';
+                
+                // Add roles to dropdown
+                data.roles.forEach(role => {
+                    const option = document.createElement('option');
+                    option.value = role.description;
+                    option.textContent = role.name;
+                    dropdown.appendChild(option);
+                });
+                
+                // Add event listener for role selection
+                dropdown.addEventListener('change', function() {
+                    if (this.value) {
+                        document.getElementById('solicitationRole').value = this.value;
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading solicitation roles:', error);
+            }
         }
         
     </script>

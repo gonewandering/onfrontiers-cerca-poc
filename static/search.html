@@ -861,6 +861,10 @@
                             exp.matching_attributes.forEach(attr => {
                                 html += '        <span class="attribute ' + (attr.type || '') + '">';
                                 html += escapeHtml(attr.name || '');
+                                // Add contribution score for this attribute
+                                if (attr.contribution_score) {
+                                    html += ' (' + attr.contribution_score.toFixed(1) + ')';
+                                }
                                 html += '</span>';
                             });
                             html += '      </div>';

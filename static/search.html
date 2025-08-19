@@ -18,11 +18,16 @@
         /* Header component styles */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 20px; text-align: center; position: relative;
+            color: white;
+        }
+        
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .nav-links {
-            position: absolute; top: 20px; left: 20px; display: flex; gap: 15px;
+            display: flex; gap: 15px; align-items: center;
         }
         
         .nav-link {
@@ -40,15 +45,87 @@
             background: rgba(255, 255, 255, 0.3); color: white;
         }
         
+        .page-header {
+            text-align: center; padding: 30px 20px;
+        }
+        
+        .page-header h1 {
+            margin: 0 0 8px 0; font-size: 28px; font-weight: 600;
+        }
+        
+        .page-header p {
+            margin: 0; opacity: 0.9; font-size: 16px;
+        }
+        
         .content { padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
         .controls { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
         .results { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .search-inputs {
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 16px;
+        }
+        
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
         .search-input {
             width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px;
-            font-size: 16px; margin-bottom: 20px; resize: vertical; min-height: 120px;
+            font-size: 14px; resize: vertical; min-height: 80px;
             font-family: inherit; line-height: 1.4;
+            transition: border-color 0.2s ease;
         }
-        .search-input:focus { outline: none; border-color: #667eea; }
+        
+        .search-input:focus { 
+            outline: none; 
+            border-color: #667eea; 
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .role-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .role-dropdown {
+            padding: 10px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+        
+        .role-dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .search-hint {
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+            margin-top: 8px;
+            padding: 6px 8px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
         .weight-controls { margin-bottom: 20px; }
         .weight-item {
             display: flex; align-items: center; margin-bottom: 12px; padding: 8px;
@@ -58,7 +135,7 @@
         .weight-slider { flex: 2; margin: 0 10px; }
         .weight-value { width: 50px; text-align: center; font-weight: bold; color: #667eea; }
         .search-button {
-            width: 100%; padding: 12px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            width: 100%; padding: 12px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500;
             cursor: pointer; transition: transform 0.2s;
         }
@@ -70,6 +147,11 @@
         }
         .expert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .expert-name { font-size: 18px; font-weight: 600; color: #343a40; }
+        .expert-name a:hover { 
+            color: #667eea !important; 
+            text-decoration: underline !important;
+            cursor: pointer;
+        }
         .expert-score {
             background: #667eea; color: white; padding: 4px 8px;
             border-radius: 12px; font-size: 14px; font-weight: 500;
@@ -237,8 +319,17 @@
             color: #495057;
         }
         
-        .total-years {
-            color: #667eea;
+        .total-info {
+            color: #667eea; font-size: 14px; font-weight: 600;
+        }
+        
+        .breakdown-section {
+            margin-bottom: 16px;
+        }
+        
+        .breakdown-title {
+            font-size: 13px; font-weight: 600; color: #495057; 
+            margin-bottom: 6px; display: flex; align-items: center; gap: 4px;
         }
         
         .breakdown-bar {
@@ -318,8 +409,26 @@
             <div class="controls">
                 <h3>Search Controls</h3>
                 
-                <textarea id="searchInput" class="search-input" rows="6"
-                          placeholder="Enter a search query."></textarea>
+                <div class="search-inputs">
+                    <div class="input-group">
+                        <label for="solicitationSummary">Solicitation Summary</label>
+                        <textarea id="solicitationSummary" class="search-input" rows="4" 
+                                 placeholder="Describe what you're looking for, requirements, project details..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="solicitationRole">Role Requirements</label>
+                        <div class="role-input-container">
+                            <select id="roleDropdown" class="role-dropdown">
+                                <option value="">Select a predefined role...</option>
+                            </select>
+                            <textarea id="solicitationRole" class="search-input" rows="3" 
+                                     placeholder="CISO, Program Manager, Technical SME, etc..."></textarea>
+                        </div>
+                    </div>
+                    <div class="search-hint">
+                        💡 Fill in at least one field above. Press Ctrl+Enter (or Cmd+Enter) to search from any field.
+                    </div>
+                </div>
                 
                 <div class="weight-controls">
                     <h4>Attribute Weights</h4>
@@ -425,6 +534,9 @@
                 'search'
             );
             document.getElementById('header-container').innerHTML = header.render();
+            
+            // Load solicitation roles for dropdown
+            loadSolicitationRoles();
         });
 
         const defaultWeights = { agency: 1.5, role: 2.0, seniority: 1.0, skill: 1.8, program: 1.2 };
@@ -520,10 +632,22 @@
             };
         }
         
+        function getSearchQuery() {
+            const summary = document.getElementById('solicitationSummary').value.trim();
+            const role = document.getElementById('solicitationRole').value.trim();
+            
+            if (!summary && !role) return '';
+            
+            let query = '';
+            if (summary) query += `Solicitation Summary:\n${summary}`;
+            if (role) query += `${query ? '\n\n' : ''}Role Requirements:\n${role}`;
+            return query;
+        }
+
         async function performSearch() {
-            const searchText = document.getElementById('searchInput').value.trim();
+            const searchText = getSearchQuery();
             if (!searchText) {
-                alert('Please enter a search query');
+                alert('Please enter either a solicitation summary or role requirements (or both)');
                 return;
             }
             
@@ -588,29 +712,40 @@
                 }
             });
             
-            // Calculate percentages and create segments
-            const segments = [];
+            // Calculate percentages for both years and score distributions
+            const yearSegments = [];
+            const scoreSegments = [];
             const totalScore = expert.total_score || 1;
             
             Object.keys(attributeContributions).forEach(attrType => {
                 const contribution = attributeContributions[attrType];
-                const percentage = Math.max(1, (contribution.score / totalScore) * 100);
                 
-                segments.push({
+                // Years percentage
+                const yearPercentage = totalYears > 0 ? (contribution.years / totalYears) * 100 : 0;
+                yearSegments.push({
                     type: attrType,
                     years: contribution.years,
-                    percentage: percentage,
-                    score: contribution.score
+                    percentage: yearPercentage
+                });
+                
+                // Score percentage
+                const scorePercentage = (contribution.score / totalScore) * 100;
+                scoreSegments.push({
+                    type: attrType,
+                    score: contribution.score,
+                    percentage: scorePercentage
                 });
             });
             
-            // Sort by score contribution (highest first)
-            segments.sort((a, b) => b.score - a.score);
+            // Sort both by their respective contributions (highest first)
+            yearSegments.sort((a, b) => b.percentage - a.percentage);
+            scoreSegments.sort((a, b) => b.percentage - a.percentage);
             
             return {
                 totalYears: totalYears,
                 breakdown: attributeContributions,
-                segments: segments
+                yearSegments: yearSegments,
+                scoreSegments: scoreSegments
             };
         }
         
@@ -623,36 +758,78 @@
             
             let html = '<div class="score-breakdown">';
             
-            // Header with total years
+            // Header with total years and score
             html += '  <div class="breakdown-header">';
-            html += '    <span>Experience Breakdown</span>';
-            html += '    <span class="total-years">' + breakdown.totalYears.toFixed(1) + ' years matched</span>';
+            html += '    <span>Experience Analysis</span>';
+            html += '    <span class="total-info">' + breakdown.totalYears.toFixed(1) + ' years | Score: ' + (expert.total_score || 0).toFixed(1) + '</span>';
             html += '  </div>';
             
-            // Colored bar
-            html += '  <div class="breakdown-bar">';
-            breakdown.segments.forEach(segment => {
-                html += '    <div class="breakdown-segment ' + segment.type + '" ';
-                html += '         style="width: ' + segment.percentage.toFixed(1) + '%;" ';
-                html += '         title="' + segment.type + ': ' + segment.years.toFixed(1) + ' years, ' + segment.percentage.toFixed(1) + '% of score">';
-                
-                // Show percentage if segment is wide enough
-                if (segment.percentage > 8) {
-                    html += segment.percentage.toFixed(0) + '%';
+            // YEARS DISTRIBUTION BAR
+            html += '  <div class="breakdown-section">';
+            html += '    <div class="breakdown-title">📅 Experience Distribution (by Years)</div>';
+            html += '    <div class="breakdown-bar">';
+            breakdown.yearSegments.forEach(segment => {
+                if (segment.percentage > 0) {
+                    html += '      <div class="breakdown-segment ' + segment.type + '" ';
+                    html += '           style="width: ' + segment.percentage.toFixed(1) + '%;" ';
+                    html += '           title="' + segment.type + ': ' + segment.years.toFixed(1) + ' years (' + segment.percentage.toFixed(1) + '% of total experience)">';
+                    
+                    // Show percentage if segment is wide enough
+                    if (segment.percentage > 8) {
+                        html += segment.percentage.toFixed(0) + '%';
+                    }
+                    
+                    html += '      </div>';
                 }
-                
-                html += '    </div>';
             });
+            html += '    </div>';
+            
+            // Years legend
+            html += '    <div class="breakdown-legend">';
+            breakdown.yearSegments.forEach(segment => {
+                if (segment.percentage > 0) {
+                    html += '      <div class="legend-item">';
+                    html += '        <div class="legend-color ' + segment.type + '"></div>';
+                    html += '        <span>' + segment.type + ': ' + segment.years.toFixed(1) + 'y (' + segment.percentage.toFixed(1) + '%)</span>';
+                    html += '      </div>';
+                }
+            });
+            html += '    </div>';
             html += '  </div>';
             
-            // Legend
-            html += '  <div class="breakdown-legend">';
-            breakdown.segments.forEach(segment => {
-                html += '    <div class="legend-item">';
-                html += '      <div class="legend-color ' + segment.type + '"></div>';
-                html += '      <span>' + segment.type + ': ' + segment.years.toFixed(1) + 'y (' + segment.percentage.toFixed(1) + '%)</span>';
-                html += '    </div>';
+            // SCORE CONTRIBUTION BAR
+            html += '  <div class="breakdown-section">';
+            html += '    <div class="breakdown-title">🎯 Score Contribution (by Weight)</div>';
+            html += '    <div class="breakdown-bar">';
+            breakdown.scoreSegments.forEach(segment => {
+                // Only display segments with actual contribution (> 0%)
+                if (segment.percentage > 0) {
+                    html += '      <div class="breakdown-segment ' + segment.type + '" ';
+                    html += '           style="width: ' + segment.percentage.toFixed(1) + '%;" ';
+                    html += '           title="' + segment.type + ': ' + segment.score.toFixed(1) + ' points (' + segment.percentage.toFixed(1) + '% of total score)">';
+                    
+                    // Show percentage if segment is wide enough
+                    if (segment.percentage > 8) {
+                        html += segment.percentage.toFixed(0) + '%';
+                    }
+                    
+                    html += '      </div>';
+                }
             });
+            html += '    </div>';
+            
+            // Score legend - show all segments including 0% ones
+            html += '    <div class="breakdown-legend">';
+            breakdown.scoreSegments.forEach(segment => {
+                html += '      <div class="legend-item">';
+                html += '        <div class="legend-color ' + segment.type + '"></div>';
+                const scoreText = segment.percentage > 0 ? 
+                    segment.type + ': ' + segment.score.toFixed(1) + ' pts (' + segment.percentage.toFixed(1) + '%)' :
+                    segment.type + ': 0.0 pts (0.0%) - not weighted';
+                html += '        <span style="' + (segment.percentage === 0 ? 'color: #6c757d; font-style: italic;' : '') + '">' + scoreText + '</span>';
+                html += '      </div>';
+            });
+            html += '    </div>';
             html += '  </div>';
             
             html += '</div>';
@@ -711,9 +888,13 @@
                 data.experts.forEach(expert => {
                 html += '<div class="expert-card">';
                 html += '  <div class="expert-header">';
-                html += '    <div class="expert-name">' + escapeHtml(expert.name || '');
+                html += '    <div class="expert-name">';
+                // Add clickable link to expert profile
                 if (expert.meta && expert.meta.profile_id) {
+                    html += '<a href="#" onclick="navigateToExpert(\'' + expert.meta.profile_id + '\')" style="color: #343a40; text-decoration: none; font-weight: 600;">' + escapeHtml(expert.name || '') + '</a>';
                     html += '<span class="profile-id">ID: ' + expert.meta.profile_id + '</span>';
+                } else {
+                    html += escapeHtml(expert.name || '');
                 }
                 html += '</div>';
                 html += '    <div class="expert-score">' + (expert.total_score || 0) + '</div>';
@@ -747,6 +928,15 @@
                             html += '        <span class="date-range">';
                             html += (exp.start_date || 'Unknown') + ' - ' + (exp.end_date || 'Unknown');
                             html += '</span>';
+                            
+                            // Calculate and show years for this experience
+                            if (exp.start_date && exp.end_date) {
+                                const startDate = new Date(exp.start_date);
+                                const endDate = new Date(exp.end_date);
+                                const years = Math.max(0.1, (endDate - startDate) / (365.25 * 24 * 60 * 60 * 1000));
+                                html += '        <span class="duration">(' + years.toFixed(1) + ' years)</span>';
+                            }
+                            
                             if (exp.score) {
                                 html += '        <span class="duration">(Score: ' + exp.score + ')</span>';
                             }
@@ -764,6 +954,10 @@
                             exp.matching_attributes.forEach(attr => {
                                 html += '        <span class="attribute ' + (attr.type || '') + '">';
                                 html += escapeHtml(attr.name || '');
+                                // Add contribution score for this attribute
+                                if (attr.contribution_score) {
+                                    html += ' (' + attr.contribution_score.toFixed(1) + ')';
+                                }
                                 html += '</span>';
                             });
                             html += '      </div>';
@@ -781,13 +975,66 @@
             resultsDiv.innerHTML = html;
         }
         
-        // Allow Ctrl+Enter or Cmd+Enter to trigger search in textarea
-        document.getElementById('searchInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                performSearch();
+        // Allow Ctrl+Enter or Cmd+Enter to trigger search in textareas
+        function addSearchKeyHandler(elementId) {
+            document.getElementById(elementId).addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+        }
+        
+        addSearchKeyHandler('solicitationSummary');
+        addSearchKeyHandler('solicitationRole');
+        
+        // Navigation function to link to experts tab
+        function extractLastNameFromProfileId(profileId) {
+            if (!profileId || profileId.length < 2) return profileId;
+            let lastName = profileId.substring(1); // Remove first character
+            lastName = lastName.replace(/\d+$/, ''); // Remove trailing numbers
+            return lastName;
+        }
+        
+        function navigateToExpert(profileId) {
+            const lastName = extractLastNameFromProfileId(profileId);
+            window.open(`/ui/experts?search=${lastName}`, '_blank');
+        }
+        
+        // Solicitation role functions
+        async function loadSolicitationRoles() {
+            try {
+                const response = await fetch('/api/solicitation-roles');
+                if (!response.ok) {
+                    console.error('Failed to load solicitation roles');
+                    return;
+                }
+                
+                const data = await response.json();
+                const dropdown = document.getElementById('roleDropdown');
+                
+                // Clear existing options except the first placeholder
+                dropdown.innerHTML = '<option value="">Select a predefined role...</option>';
+                
+                // Add roles to dropdown
+                data.roles.forEach(role => {
+                    const option = document.createElement('option');
+                    option.value = role.description;
+                    option.textContent = role.name;
+                    dropdown.appendChild(option);
+                });
+                
+                // Add event listener for role selection
+                dropdown.addEventListener('change', function() {
+                    if (this.value) {
+                        document.getElementById('solicitationRole').value = this.value;
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading solicitation roles:', error);
             }
-        });
+        }
         
     </script>
 </body>

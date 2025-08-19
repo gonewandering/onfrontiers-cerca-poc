@@ -24,11 +24,16 @@
         /* Header component styles */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 20px; text-align: center; position: relative;
+            color: white;
+        }
+        
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .nav-links {
-            position: absolute; top: 20px; left: 20px; display: flex; gap: 15px;
+            display: flex; gap: 15px; align-items: center;
         }
         
         .nav-link {
@@ -44,6 +49,18 @@
         
         .nav-link.active {
             background: rgba(255, 255, 255, 0.3); color: white;
+        }
+        
+        .page-header {
+            text-align: center; padding: 30px 20px;
+        }
+        
+        .page-header h1 {
+            margin: 0 0 8px 0; font-size: 28px; font-weight: 600;
+        }
+        
+        .page-header p {
+            margin: 0; opacity: 0.9; font-size: 16px;
         }
         
         .content {
@@ -299,6 +316,40 @@
             display: flex;
             align-items: center;
             gap: 4px;
+        }
+        
+        .onfrontiers-link {
+            margin: 4px 0 8px 0;
+        }
+        
+        .onfrontiers-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .onfrontiers-link a:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .expert-header.expanded .onfrontiers-link a {
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .expert-header.expanded .onfrontiers-link a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
         }
         
         .expand-indicator {
@@ -648,12 +699,36 @@
             );
             document.getElementById('header-container').innerHTML = header.render();
             
-            // Load experts
-            loadExperts(1);
+            // Check for search parameter to highlight specific expert
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            
+            // Load experts with search if provided
+            if (searchParam) {
+                loadExperts(1, null, searchParam).then(() => {
+                    // Auto-expand the first expert found (should be the target)
+                    if (expertsData.length > 0) {
+                        const targetExpert = expertsData[0];
+                        setTimeout(async () => {
+                            await toggleExpert(targetExpert.id);
+                            setTimeout(() => {
+                                const expertCard = document.getElementById(`expert-${targetExpert.id}`);
+                                if (expertCard) {
+                                    expertCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    expertCard.style.border = '2px solid #667eea';
+                                    expertCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
+                                }
+                            }, 300);
+                        }, 500);
+                    }
+                });
+            } else {
+                loadExperts(1);
+            }
         });
         
         async function loadExperts(page = 1, newPageSize = null, searchQuery = null) {
-            if (isLoading) return;
+            if (isLoading) return Promise.resolve();
             
             if (newPageSize) {
                 pageSize = newPageSize;
@@ -727,6 +802,46 @@
                 countElement.textContent = 'Error loading experts';
             } finally {
                 isLoading = false;
+            }
+        }
+        
+        async function highlightExpertByProfileId(profileId) {
+            // Search for expert by profile_id using the API search functionality
+            try {
+                await loadExperts(1, null, profileId);
+                
+                // Find the expert with matching profile_id in the loaded results
+                const targetExpert = expertsData.find(exp => exp.meta && exp.meta.profile_id === profileId);
+                if (targetExpert) {
+                    // Expand and highlight the expert
+                    setTimeout(async () => {
+                        await toggleExpert(targetExpert.id);
+                        setTimeout(() => {
+                            const expertCard = document.getElementById(`expert-${targetExpert.id}`);
+                            if (expertCard) {
+                                expertCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                expertCard.style.border = '2px solid #667eea';
+                                expertCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
+                            }
+                        }, 300);
+                    }, 500);
+                } else {
+                    // Expert not found in search results
+                    const container = document.getElementById('expertsContainer');
+                    container.innerHTML = `
+                        <div class="error">
+                            Expert with profile ID "${profileId}" not found in database.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error finding expert:', error);
+                const container = document.getElementById('expertsContainer');
+                container.innerHTML = `
+                    <div class="error">
+                        Error searching for expert: ${error.message}
+                    </div>
+                `;
             }
         }
         
@@ -828,9 +943,20 @@
             header.className = 'expert-header';
             header.onclick = () => toggleExpert(expert.id);
             
+            // Get profile ID from meta data
+            const profileId = expert.meta && expert.meta.profile_id ? expert.meta.profile_id : null;
+            const onFrontiersLink = profileId ? `
+                <div class="onfrontiers-link">
+                    <a href="https://app.onfrontiers.com/profile/${profileId}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
+                        🔗 See OnFrontiers Profile
+                    </a>
+                </div>
+            ` : '';
+            
             header.innerHTML = `
                 <div class="expert-info">
                     <div class="expert-name">${escapeHtml(expert.name)}</div>
+                    ${onFrontiersLink}
                     <div class="expert-summary">${escapeHtml(expert.summary || 'No summary available')}</div>
                     <div class="expert-meta">
                         <div class="meta-item">

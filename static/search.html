@@ -60,12 +60,49 @@
         .content { padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
         .controls { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
         .results { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .search-inputs {
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 16px;
+        }
+        
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
         .search-input {
             width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px;
-            font-size: 16px; margin-bottom: 20px; resize: vertical; min-height: 120px;
+            font-size: 14px; resize: vertical; min-height: 80px;
             font-family: inherit; line-height: 1.4;
+            transition: border-color 0.2s ease;
         }
-        .search-input:focus { outline: none; border-color: #667eea; }
+        
+        .search-input:focus { 
+            outline: none; 
+            border-color: #667eea; 
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .search-hint {
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+            margin-top: 8px;
+            padding: 6px 8px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
         .weight-controls { margin-bottom: 20px; }
         .weight-item {
             display: flex; align-items: center; margin-bottom: 12px; padding: 8px;
@@ -335,8 +372,21 @@
             <div class="controls">
                 <h3>Search Controls</h3>
                 
-                <textarea id="searchInput" class="search-input" rows="6"
-                          placeholder="Enter a search query."></textarea>
+                <div class="search-inputs">
+                    <div class="input-group">
+                        <label for="solicitationSummary">Solicitation Summary</label>
+                        <textarea id="solicitationSummary" class="search-input" rows="4" 
+                                 placeholder="Describe what you're looking for, requirements, project details..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="solicitationRole">Role Requirements</label>
+                        <textarea id="solicitationRole" class="search-input" rows="3" 
+                                 placeholder="CISO, Program Manager, Technical SME, etc..."></textarea>
+                    </div>
+                    <div class="search-hint">
+                        💡 Fill in at least one field above. Press Ctrl+Enter (or Cmd+Enter) to search from any field.
+                    </div>
+                </div>
                 
                 <div class="weight-controls">
                     <h4>Attribute Weights</h4>
@@ -537,10 +587,22 @@
             };
         }
         
+        function getSearchQuery() {
+            const summary = document.getElementById('solicitationSummary').value.trim();
+            const role = document.getElementById('solicitationRole').value.trim();
+            
+            if (!summary && !role) return '';
+            
+            let query = '';
+            if (summary) query += `Solicitation Summary:\n${summary}`;
+            if (role) query += `${query ? '\n\n' : ''}Role Requirements:\n${role}`;
+            return query;
+        }
+
         async function performSearch() {
-            const searchText = document.getElementById('searchInput').value.trim();
+            const searchText = getSearchQuery();
             if (!searchText) {
-                alert('Please enter a search query');
+                alert('Please enter either a solicitation summary or role requirements (or both)');
                 return;
             }
             
@@ -798,13 +860,18 @@
             resultsDiv.innerHTML = html;
         }
         
-        // Allow Ctrl+Enter or Cmd+Enter to trigger search in textarea
-        document.getElementById('searchInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                performSearch();
-            }
-        });
+        // Allow Ctrl+Enter or Cmd+Enter to trigger search in textareas
+        function addSearchKeyHandler(elementId) {
+            document.getElementById(elementId).addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+        }
+        
+        addSearchKeyHandler('solicitationSummary');
+        addSearchKeyHandler('solicitationRole');
         
     </script>
 </body>

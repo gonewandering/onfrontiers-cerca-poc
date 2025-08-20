@@ -58,7 +58,7 @@
         }
         
         .content { padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
-        .controls { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .controls { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; overflow: hidden; min-width: 0; }
         .results { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
         .search-inputs {
             margin-bottom: 20px;
@@ -97,6 +97,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            max-width: 100%;
         }
         
         .role-dropdown {
@@ -108,6 +109,11 @@
             background: white;
             cursor: pointer;
             transition: border-color 0.2s ease;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
         .role-dropdown:focus {
@@ -412,8 +418,13 @@
                 <div class="search-inputs">
                     <div class="input-group">
                         <label for="solicitationSummary">Solicitation Summary</label>
-                        <textarea id="solicitationSummary" class="search-input" rows="4" 
-                                 placeholder="Describe what you're looking for, requirements, project details..."></textarea>
+                        <div class="role-input-container">
+                            <select id="summaryDropdown" class="role-dropdown">
+                                <option value="">Select a predefined summary...</option>
+                            </select>
+                            <textarea id="solicitationSummary" class="search-input" rows="4" 
+                                     placeholder="Describe what you're looking for, requirements, project details..."></textarea>
+                        </div>
                     </div>
                     <div class="input-group">
                         <label for="solicitationRole">Role Requirements</label>
@@ -537,6 +548,9 @@
             
             // Load solicitation roles for dropdown
             loadSolicitationRoles();
+            
+            // Load solicitation summaries for dropdown
+            loadSolicitationSummaries();
         });
 
         const defaultWeights = { agency: 1.5, role: 2.0, seniority: 1.0, skill: 1.8, program: 1.2 };
@@ -1033,6 +1047,45 @@
                 
             } catch (error) {
                 console.error('Error loading solicitation roles:', error);
+            }
+        }
+        
+        async function loadSolicitationSummaries() {
+            try {
+                const response = await fetch('/api/solicitation-summaries');
+                if (!response.ok) {
+                    console.error('Failed to load solicitation summaries');
+                    return;
+                }
+                
+                const data = await response.json();
+                const dropdown = document.getElementById('summaryDropdown');
+                
+                // Clear existing options except the first placeholder
+                dropdown.innerHTML = '<option value="">Select a predefined summary...</option>';
+                
+                // Add summaries to dropdown
+                data.summaries.forEach(summary => {
+                    const option = document.createElement('option');
+                    option.value = summary.summary;
+                    // Truncate long titles for display but keep full title as tooltip
+                    const displayTitle = summary.title.length > 60 ? 
+                        summary.title.substring(0, 60) + '...' : 
+                        summary.title;
+                    option.textContent = displayTitle;
+                    option.title = summary.title; // Full title in tooltip
+                    dropdown.appendChild(option);
+                });
+                
+                // Add event listener for summary selection
+                dropdown.addEventListener('change', function() {
+                    if (this.value) {
+                        document.getElementById('solicitationSummary').value = this.value;
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading solicitation summaries:', error);
             }
         }
         
